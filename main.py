@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import List, Optional, Dict
 
 from fastapi import FastAPI, HTTPException, Request, Form, BackgroundTasks, Depends, Query, Cookie, Body
-from fastapi.responses import RedirectResponse, JSONResponse
+from fastapi.responses import RedirectResponse, JSONResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
@@ -51,7 +51,7 @@ class VerifyCodeRequest(BaseModel):
 
 @app.on_event("startup")
 async def on_startup():
-    logger.info("Starting up application and initializing database...")
+    logger.info("Starting up application (v 1.0.1) and initializing database...")
     await init_db(engine)
     logger.info("Database initialized successfully.")
 
@@ -60,9 +60,24 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 templates = Jinja2Templates(directory="templates/pages")
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+@app.get("/", response_class=HTMLResponse)
+@limiter.limit("10/minute")
+async def read_root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/test", response_class=HTMLResponse)
+async def test_page(request: Request):
+    return templates.TemplateResponse("test.html", {"request": request})
+
+@app.exception_handler(404)
+async def custom_404_handler(request: Request, exc: HTTPException):
+    return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+
 
 
 async def send_webhook(payment_id: str, payment: dict):
@@ -186,12 +201,6 @@ async def get_user_info_api(email: str, db: AsyncSession = Depends(get_db)):
             for c in cards
         ]
     }
-
-
-@app.get("/")
-@limiter.limit("10/minute")
-async def read_root(request: Request):
-    return {"status": "operational"}
 
 
 @app.post("/api/create-invoice", response_model=CreateInvoiceResponse)

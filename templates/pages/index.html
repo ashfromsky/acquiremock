@@ -1,0 +1,199 @@
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AcquireMock — Payments for Developers</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* Landing Specific Styles */
+        body {
+            justify-content: flex-start; /* Разрешаем скролл */
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        .hero-section {
+            min-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 40px 20px;
+            position: relative;
+        }
+
+        .hero-title {
+            font-size: 64px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            line-height: 1.1;
+            background: var(--btn-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-family: 'Playfair Display', serif;
+        }
+
+        .hero-subtitle {
+            font-size: 20px;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin-bottom: 48px;
+            line-height: 1.6;
+        }
+
+        .cta-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 2px solid var(--text-main);
+            color: var(--text-main);
+            box-shadow: none;
+        }
+        .btn-outline:hover {
+            background: var(--text-main);
+            color: var(--card-bg);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            max-width: 1200px;
+            margin: 0 auto 100px;
+            padding: 0 20px;
+        }
+
+        .feature-card {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: var(--radius-card);
+            box-shadow: var(--shadow-soft);
+            text-align: left;
+            border: 1px solid rgba(0,0,0,0.03);
+            transition: transform 0.3s ease;
+        }
+
+        .dark-mode .feature-card {
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(193, 102, 107, 0.1);
+            color: var(--accent-primary);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .feature-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--text-main);
+        }
+
+        .feature-desc {
+            color: var(--text-secondary);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        /* Nav */
+        .nav {
+            width: 100%;
+            padding: 30px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="nav">
+        <div style="display:flex; align-items:center; gap:10px; font-weight:700; font-size:18px;">
+            <img src="/static/images/AcquireMock.svg" alt="Logo" style="height:24px;">
+        </div>
+        <div class="top-controls" style="position:static;">
+            <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+                <svg class="sun-icon" style="display: none;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                <svg class="moon-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+            </button>
+        </div>
+    </nav>
+
+    <div class="hero-section">
+        <div style="font-family: monospace; color: var(--accent-secondary); margin-bottom: 16px; letter-spacing: 1px;">V1.0.0 STABLE</div>
+        <h1 class="hero-title">Платежі майбутнього<br>вже сьогодні</h1>
+        <p class="hero-subtitle">
+            Швидка інтеграція, безпечні транзакції та зручний інтерфейс для ваших клієнтів.
+            AcquireMock — це ідеальне рішення для навчальних проектів та стартапів.
+        </p>
+
+        <div class="cta-group">
+            <a href="/test" class="submit-btn" style="width:auto; padding: 0 40px; margin:0;">Демо Тест</a>
+            <a href="/docs" class="submit-btn btn-outline" style="width:auto; padding: 0 40px; margin:0;">API Docs</a>
+        </div>
+    </div>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>
+            </div>
+            <h3 class="feature-title">Smart Checkout</h3>
+            <p class="feature-desc">Адаптивний дизайн, підтримка темної теми та збереження карток для швидких оплат.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            </div>
+            <h3 class="feature-title">Secure & Safe</h3>
+            <p class="feature-desc">Вбудована перевірка OTP, захист від CSRF атак та безпечна обробка даних.</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+            </div>
+            <h3 class="feature-title">Real-time Analytics</h3>
+            <p class="feature-desc">Миттєві сповіщення про транзакції на Email та Webhook інтеграція.</p>
+        </div>
+    </div>
+
+    <footer style="text-align:center; padding: 40px; color: var(--text-secondary); font-size: 14px; border-top: 1px solid rgba(0,0,0,0.05);">
+        <p>© 2025 AcquireMock. All rights reserved.</p>
+    </footer>
+
+    <script src="/static/js/i18n.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                updateThemeIcon(true);
+            } else {
+                updateThemeIcon(false);
+            }
+        });
+    </script>
+</body>
+</html>
