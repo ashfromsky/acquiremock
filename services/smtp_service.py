@@ -28,12 +28,13 @@ async def send_email(to_email, subject, html_content, text_content):
 
     try:
         await aiosmtplib.send(
-            message=msg,
+            msg,
             hostname=SMTP_HOST,
             port=int(SMTP_PORT),
             username=SMTP_USER,
             password=SMTP_PASS,
-            use_tls=True
+            use_tls=False,
+            start_tls=True
         )
         print(f"Email sent to {to_email} (Async)")
     except Exception as e:
