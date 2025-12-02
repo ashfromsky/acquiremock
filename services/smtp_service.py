@@ -29,8 +29,6 @@ async def send_email(to_email, subject, html_content, text_content):
     msg.attach(part1)
     msg.attach(part2)
 
-    logger.info(f"Preparing to send email to {to_email} with subject: {subject}")
-
     try:
         await aiosmtplib.send(
             msg,
@@ -38,8 +36,9 @@ async def send_email(to_email, subject, html_content, text_content):
             port=int(SMTP_PORT),
             username=SMTP_USER,
             password=SMTP_PASS,
-            use_tls=False,
-            start_tls=True
+            use_tls=True,
+            start_tls=False,
+            timeout=10
         )
         logger.info(f"Email successfully sent to {to_email}")
     except Exception as e:
