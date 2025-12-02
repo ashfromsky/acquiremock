@@ -11,7 +11,7 @@ def generate_csrf_token() -> str:
     return secrets.token_urlsafe(32)
 
 def hash_sensitive_data(data: str) -> str:
-    return pwd_context.hash(data)
+    return pwd_context.hash(data[:72])
 
 def verify_sensitive_data(plain_data: str, hashed_data: str) -> bool:
     return pwd_context.verify(plain_data, hashed_data)
