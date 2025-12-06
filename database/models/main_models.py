@@ -1,6 +1,6 @@
 ﻿from sqlmodel import SQLModel, Field
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 from enum import Enum
 
 class PaymentStatus(str, Enum):
@@ -32,7 +32,7 @@ class Payment(SQLModel, table=True):
     webhook_status: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    expires_at: datetime = Field(default_factory=lambda: datetime.utcnow())
+    expires_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(minutes=15))
     paid_at: Optional[datetime] = Field(default=None)
 
 class SuccessFulOperation(SQLModel, table=True):

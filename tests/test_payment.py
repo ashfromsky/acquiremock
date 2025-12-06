@@ -6,7 +6,7 @@ import random
 
 API_URL = "http://localhost:8000"
 WEBHOOK_URL = "https://webhook.site/unique-id"
-REDIRECT_URL = "http://localhost:8000/orders/success"
+REDIRECT_URL = "http://localhost:8000"
 
 def test_create_invoice():
     print("🧪 Тестування AcquireMock Payment Gateway\n")
@@ -67,7 +67,7 @@ def test_create_invoice():
 
     except requests.exceptions.ConnectionError:
         print("❌ Помилка: Не можу підключитися до сервера")
-        print("   Перевірте чи запущений FastAPI на http://localhost:8008")
+        print("   Перевірте чи запущений FastAPI на http://localhost:8000")
         print("   Запустіть: uvicorn main:app --port 8000 --reload")
 
     except requests.exceptions.HTTPError as e:

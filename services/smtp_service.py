@@ -66,7 +66,10 @@ async def send_otp_email(to_email: str, otp_code: str):
     subject = "AcquireMock: Your Verification Code"
     template_path = Path("templates/misc/email-letter.html")
 
-    logger.info(f"🔐 OTP Code for {to_email}: {otp_code}")
+    if not EMAIL_ENABLED:
+        logger.info(f"🔐 OTP Code for {to_email}: {otp_code}")
+    else:
+        logger.info(f"🔐 OTP Code sent to {to_email}")
 
     try:
         with open(template_path, "r", encoding="utf-8") as f:

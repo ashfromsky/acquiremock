@@ -3,12 +3,15 @@
 > Mock payment gateway for testing payment integrations without real money
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-yellow.svg)](https://opensource.org/licenses/Apache-2.0)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-green.svg)](https://fastapi.tiangolo.com)
+[![Tests](https://github.com/illusiOxd/acquiremock/workflows/Tests/badge.svg)](https://github.com/illusiOxd/acquiremock/actions)
+[![Docker](https://img.shields.io/badge/docker-ready-blue.svg)](https://hub.docker.com/)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 A full-featured mock payment gateway that simulates real payment flows including OTP verification, webhooks with HMAC signatures, and card storage - perfect for testing e-commerce integrations.
 
-![Demo](demo.gif)
+![Demo](assets/acquiremock.gif)
 
 ## ✨ Features
 
@@ -33,6 +36,8 @@ A full-featured mock payment gateway that simulates real payment flows including
 ### Using Docker (Recommended)
 
 ```bash
+git clone https://github.com/illusiOxd/acquiremock.git
+cd acquiremock
 docker-compose up
 ```
 
@@ -42,7 +47,7 @@ Visit `http://localhost:8000`
 
 ```bash
 # Clone repository
-git clone https://github.com/yourusername/acquiremock.git
+git clone https://github.com/illusiOxd/acquiremock.git
 cd acquiremock
 
 # Install dependencies
@@ -53,7 +58,10 @@ pip install -r requirements.txt
 # Setup environment
 cp .env.example .env
 
-# Run
+# Edit .env and configure your database
+nano .env
+
+# Run application
 uvicorn main:app --port 8000 --reload
 ```
 
@@ -62,7 +70,12 @@ uvicorn main:app --port 8000 --reload
 ### Required
 
 ```env
-DATABASE_URL=sqlite+aiosqlite:///./payment.db
+# Production (PostgreSQL)
+DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/payment_db
+
+# Development (SQLite)
+# DATABASE_URL=sqlite+aiosqlite:///./payment.db
+
 WEBHOOK_SECRET=your-secret-key-min-32-chars
 BASE_URL=http://localhost:8000
 ```
@@ -179,6 +192,7 @@ Visit `http://localhost:8000/test` for a built-in test interface.
 - Security headers (XSS, Frame Options, Content-Type)
 - Rate limiting (5 req/min per IP)
 - Input sanitization
+- Secure cookies (HTTPOnly, Secure, SameSite)
 
 ## 📊 Database Schema
 
@@ -208,10 +222,22 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:///./payment.db
+      - DATABASE_URL=postgresql+asyncpg://user:password@db:5432/payment_db
       - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+    depends_on:
+      - db
+  
+  db:
+    image: postgres:15
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=payment_db
     volumes:
-      - ./data:/app/data
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
 ```
 
 ## 🔄 Migration to Real PSP
@@ -236,7 +262,7 @@ Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
 ## 📝 License
 
-MIT License - see [LICENSE](LICENSE) for details.
+Apache License 2.0 - see [LICENSE](LICENSE) for details.
 
 ## ⚠️ Disclaimer
 
@@ -255,14 +281,21 @@ Built with:
 - [SQLModel](https://sqlmodel.tiangolo.com/) - SQL databases in Python
 - [Jinja2](https://jinja.palletsprojects.com/) - Template engine
 
+## 📬 Contact
+
+- **Issues**: [GitHub Issues](https://github.com/illusiOxd/acquiremock/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/illusiOxd/acquiremock/discussions)
+
 ---
 
 <div align="center">
 
-**[Documentation](https://github.com/yourusername/acquiremock/wiki)** • 
-**[Report Bug](https://github.com/yourusername/acquiremock/issues)** • 
-**[Request Feature](https://github.com/yourusername/acquiremock/issues)**
+**[Documentation](https://github.com/illusiOxd/acquiremock/wiki)** • 
+**[Report Bug](https://github.com/illusiOxd/acquiremock/issues)** • 
+**[Request Feature](https://github.com/illusiOxd/acquiremock/issues)**
 
 Made with ❤️ for developers who need to test payments
+
+⭐ **Star us on GitHub — it helps!**
 
 </div>

@@ -270,7 +270,13 @@ async def checkout(payment_id: str, request: Request, db: AsyncSession = Depends
         "csrf_token": csrf_token
     })
 
-    response.set_cookie(key="csrf_token", value=csrf_token, httponly=True)
+    response.set_cookie(
+        key="csrf_token",
+        value=csrf_token,
+        httponly=True,
+        secure=True,
+        samesite="Strict"
+    )
     return response
 
 
@@ -285,7 +291,7 @@ async def process_payment(
         cvv: Optional[str] = Form(None),
         saved_card_id: Optional[str] = Form(None),
         email: str = Form(...),
-        save_card: bool = Form(False),
+        save_card: Optional[str] = Form(None),
         csrf_token: str = Form(...),
         idempotency_key: Optional[str] = Header(None),
         db: AsyncSession = Depends(get_db)
@@ -318,6 +324,7 @@ async def process_payment(
 
     is_valid_card = False
     card_mask_display = ""
+    save_card_bool = save_card == "true" if save_card else False
 
     if saved_card_id and saved_card_id.strip():
         card_id_int = int(saved_card_id)
@@ -341,7 +348,7 @@ async def process_payment(
             payment.otp_email = email
             payment.card_mask = card_mask_display
 
-            if save_card:
+            if save_card_bool:
                 existing = await db.execute(select(SavedCard).where(
                     SavedCard.email == email,
                     SavedCard.card_mask == card_mask_display
@@ -365,7 +372,16 @@ async def process_payment(
         if cookie_email and cookie_email == email:
             logger.info(f"Cookie matched for {email}, skipping OTP")
             await finalize_successful_payment(payment, db, background_tasks)
-            return RedirectResponse(url=f"/success/{payment_id}", status_code=303)
+            response = RedirectResponse(url=f"/success/{payment_id}", status_code=303)
+            response.set_cookie(
+                key="user_email",
+                value=email,
+                max_age=2592000,
+                httponly=True,
+                secure=True,
+                samesite="Strict"
+            )
+            return response
 
         otp_code = generate_secure_otp()
         payment.otp_code = otp_code
@@ -416,7 +432,16 @@ async def verify_otp(
     payment.otp_code = None
     await finalize_successful_payment(payment, db, background_tasks)
 
-    return RedirectResponse(url=f"/success/{payment_id}", status_code=303)
+    response = RedirectResponse(url=f"/success/{payment_id}", status_code=303)
+    response.set_cookie(
+        key="user_email",
+        value=payment.otp_email,
+        max_age=2592000,
+        httponly=True,
+        secure=True,
+        samesite="Strict"
+    )
+    return response
 
 
 @app.get("/success/{payment_id}")
