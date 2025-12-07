@@ -31,6 +31,33 @@ A full-featured mock payment gateway that simulates real payment flows including
 - Building MVPs without payment provider setup
 - Educational projects and demos
 
+## 🗺️ Roadmap
+
+Our goal is to make AcquireMock a **complete payment gateway constructor** - a flexible platform where you can simulate any payment provider's behavior.
+
+### Current Status (v1.0) ✅
+- Basic payment flow with OTP
+- Webhook delivery with HMAC signatures
+- Card storage and transaction history
+- Multi-language UI with dark mode
+
+### Next Steps (v1.1-1.2) 🚧
+- **Multi-PSP Emulation** - Switch between Stripe, PayPal, Square response formats
+- **Custom Response Builder** - Define your own success/failure scenarios
+- **Advanced Webhook Testing** - Simulate delays, failures, retries with custom timing
+- **3D Secure Flow** - Mock authentication pages
+- **Refund & Chargeback Simulation** - Test full payment lifecycle
+
+### Future Vision (v2.0+) 🎯
+- **Visual Flow Builder** - Drag-and-drop payment scenario designer
+- **Plugin System** - Add custom payment methods (crypto, BNPL, etc.)
+- **API Playground** - Interactive testing without writing code
+- **Multi-Currency Support** - Test currency conversion scenarios
+- **Fraud Detection Simulator** - Test how your app handles suspicious transactions
+- **Dashboard UI** - Visual transaction monitoring like real PSPs
+
+**Want to help shape this?** Check our [Discussions](https://github.com/illusiOxd/acquiremock/discussions) or open a feature request!
+
 ## 🚀 Quick Start
 
 ### Using Docker (Recommended)
