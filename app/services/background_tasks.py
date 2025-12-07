@@ -1,10 +1,8 @@
 ﻿import asyncio
 import logging
-from datetime import datetime
-from sqlalchemy.ext.asyncio import AsyncSession
-from database.functional.main_functions import get_expired_payments, update_payment, get_failed_webhooks
-from database.chore.session import AsyncSessionLocal
-from services.webhook_service import send_webhook_with_retry
+from app.functional.main_functions import get_expired_payments, update_payment, get_failed_webhooks
+from app.database.core.session import AsyncSessionLocal
+from app.services.webhook_service import send_webhook_with_retry
 
 logger = logging.getLogger(__name__)
 

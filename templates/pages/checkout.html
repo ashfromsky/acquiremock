@@ -54,7 +54,7 @@
             </div>
         </div>
 
-        <form id="paymentForm" method="POST" action="/pay/{{ payment_id }}">
+        <form id="paymentForm" method="POST" action="/api/pay/{{ payment_id }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
             <input type="hidden" name="email" id="hiddenEmail">
             <input type="hidden" name="saved_card_id" id="savedCardId">

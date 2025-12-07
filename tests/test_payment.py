@@ -3,6 +3,7 @@ import json
 import webbrowser
 from datetime import datetime
 import random
+import pytest
 
 API_URL = "http://localhost:8000"
 WEBHOOK_URL = "https://webhook.site/unique-id"
@@ -91,13 +92,11 @@ def test_health_check():
         data = response.json()
 
         print("✅ Сервер працює!")
-        print(f"Статус: {data.get('status')}")
-        print(f"Час: {data.get('timestamp')}")
-        return True
+        assert data.get('status') == 'ok'
+        assert 'timestamp' in data
 
-    except:
-        print("❌ Сервер не відповідає")
-        return False
+    except Exception as e:
+        pytest.fail(f"❌ Сервер не відповідає: {e}")
 
 
 if __name__ == "__main__":

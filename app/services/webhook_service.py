@@ -3,11 +3,10 @@ import json
 import hmac
 import hashlib
 import logging
-from typing import Dict, Optional
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
-from database.models.main_models import WebhookLog, Payment
-from database.functional.main_functions import log_webhook, update_payment
+from app.models.main_models import WebhookLog, Payment
+from app.functional.main_functions import log_webhook, update_payment
 import os
 from dotenv import load_dotenv
 

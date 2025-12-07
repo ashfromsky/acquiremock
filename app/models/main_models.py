@@ -35,7 +35,7 @@ class Payment(SQLModel, table=True):
     expires_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(minutes=15))
     paid_at: Optional[datetime] = Field(default=None)
 
-class SuccessFulOperation(SQLModel, table=True):
+class SuccessfulOperation(SQLModel, table=True):
     __tablename__ = "successful_operations"
 
     id: Optional[int] = Field(default=None, primary_key=True)
