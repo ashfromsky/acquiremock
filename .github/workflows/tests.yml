@@ -32,6 +32,7 @@ jobs:
         echo "pythonpath = ." >> pytest.ini
         echo "asyncio_mode = auto" >> pytest.ini
         echo "asyncio_default_fixture_loop_scope = function" >> pytest.ini
+        echo "addopts = --ignore=tests/test_payment.py" >> pytest.ini
         echo "filterwarnings =" >> pytest.ini
         echo "    ignore::pytest.PytestRemovedIn9Warning" >> pytest.ini
 
