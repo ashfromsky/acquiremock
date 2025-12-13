@@ -3,4 +3,4 @@
 .git
 .env
 venv/
-static/
+app/static/
