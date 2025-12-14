@@ -34,14 +34,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+TESTING = os.getenv("TESTING", "false").lower() == "true"
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting up application and initializing database...")
     await init_db(engine)
     logger.info("Database initialized successfully.")
-    asyncio.create_task(start_background_tasks())
-    logger.info("Background tasks started")
+
+    if not TESTING:
+        asyncio.create_task(start_background_tasks())
+        logger.info("Background tasks started")
+    else:
+        logger.info("Skipping background tasks (testing mode)")
+
     yield
     logger.info("Shutting down application...")
 
@@ -89,7 +96,7 @@ app.include_router(user.router)
 app.include_router(merchant.router)
 app.include_router(checkout.router)
 
-
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

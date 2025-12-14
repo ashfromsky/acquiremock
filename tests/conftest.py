@@ -9,13 +9,14 @@ from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+os.environ["TESTING"] = "true"
 
 from app.main import app
 from app.database.core.session import get_db
 
 test_engine = create_async_engine(
     "sqlite+aiosqlite:///:memory:",
-    echo=True,
+    echo=False,
     connect_args={"check_same_thread": False},
 )
 
@@ -45,7 +46,17 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 
     app.dependency_overrides[get_db] = override_get_db
 
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test"
+    ) as c:
         yield c
 
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
