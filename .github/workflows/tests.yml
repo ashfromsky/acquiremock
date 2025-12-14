@@ -27,25 +27,29 @@ jobs:
         pip install -r requirements.txt
         pip install pytest pytest-asyncio pytest-cov pytest-timeout httpx aiosqlite
 
-    - name: Configure pytest
+    - name: Verify installation
       run: |
-        echo "[pytest]" > pytest.ini
-        echo "pythonpath = ." >> pytest.ini
-        echo "asyncio_mode = auto" >> pytest.ini
-        echo "asyncio_default_fixture_loop_scope = function" >> pytest.ini
-        echo "addopts = --ignore=tests/test_payment.py -v --tb=short" >> pytest.ini
-        echo "filterwarnings =" >> pytest.ini
-        echo "    ignore::pytest.PytestRemovedIn9Warning" >> pytest.ini
-        echo "    ignore::DeprecationWarning" >> pytest.ini
+        python -c "import pytest; print(f'pytest version: {pytest.__version__}')"
+        python -c "import httpx; print(f'httpx version: {httpx.__version__}')"
+        python -c "import sqlalchemy; print(f'sqlalchemy version: {sqlalchemy.__version__}')"
 
     - name: Run tests
       env:
         TESTING: "true"
         DATABASE_URL: "sqlite+aiosqlite:///:memory:"
-        WEBHOOK_SECRET: "test_secret_key_for_ci_testing_12345678"
+        WEBHOOK_SECRET: "test_secret_key_for_ci_testing_minimum_32_characters_long"
         BASE_URL: "http://test"
+        PYTHONPATH: "."
       run: |
-        pytest tests/ -v --tb=short --cov=app --cov-report=term --cov-report=xml --timeout=30
+        pytest tests/ \
+          --ignore=tests/test_payment.py \
+          -v \
+          --tb=short \
+          --cov=app \
+          --cov-report=term \
+          --cov-report=xml \
+          --timeout=30 \
+          --asyncio-mode=auto
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
