@@ -56,3 +56,10 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
         yield c
 
     app.dependency_overrides.clear()
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Force exit after tests complete to prevent hanging."""
+    import sys
+    if exitstatus == 0:
+        sys.exit(0)
