@@ -27,19 +27,22 @@ jobs:
         pip install -r requirements.txt
         pip install pytest pytest-asyncio pytest-cov pytest-timeout httpx aiosqlite
 
-    - name: Verify installation
+    - name: Verify pytest.ini exists
       run: |
-        python -c "import pytest; print(f'pytest version: {pytest.__version__}')"
-        python -c "import httpx; print(f'httpx version: {httpx.__version__}')"
-        python -c "import sqlalchemy; print(f'sqlalchemy version: {sqlalchemy.__version__}')"
+        if [ -f pytest.ini ]; then
+          echo "✅ pytest.ini found"
+          cat pytest.ini
+        else
+          echo "❌ pytest.ini not found!"
+          exit 1
+        fi
 
     - name: Run tests
       env:
         TESTING: "true"
         DATABASE_URL: "sqlite+aiosqlite:///:memory:"
-        WEBHOOK_SECRET: "test_secret_key_for_ci_testing_minimum_32_characters_long"
+        WEBHOOK_SECRET: "test_secret_key_for_ci_minimum_32_chars"
         BASE_URL: "http://test"
-        PYTHONPATH: "."
       run: |
         pytest tests/ \
           --ignore=tests/test_payment.py \
@@ -48,8 +51,7 @@ jobs:
           --cov=app \
           --cov-report=term \
           --cov-report=xml \
-          --timeout=30 \
-          --asyncio-mode=auto
+          --timeout=30
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3
