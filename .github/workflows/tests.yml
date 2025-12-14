@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
     - name: Checkout code
@@ -37,7 +37,13 @@ jobs:
         echo "filterwarnings =" >> pytest.ini
         echo "    ignore::pytest.PytestRemovedIn9Warning" >> pytest.ini
 
-    - name: Run tests
+    - name: Run tests with timeout
       run: |
-        pytest -v --tb=short
-      timeout-minutes: 5
+        export TESTING=true
+        timeout 60s pytest -v --tb=short || exit_code=$?
+        if [ $exit_code -eq 124 ]; then
+          echo "::error::Tests timed out after 60 seconds"
+          echo "This indicates background tasks are not properly disabled"
+          exit 1
+        fi
+        exit ${exit_code:-0}
