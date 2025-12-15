@@ -9,7 +9,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
     - name: Checkout code
@@ -30,20 +30,22 @@ jobs:
     - name: Verify pytest.ini exists
       run: |
         if [ -f pytest.ini ]; then
-          echo "✅ pytest.ini found"
+          echo "pytest.ini found"
           cat pytest.ini
         else
-          echo "❌ pytest.ini not found!"
+          echo "pytest.ini not found!"
           exit 1
         fi
 
-    - name: Run tests
+    - name: Run tests with timeout
+      timeout-minutes: 3
       env:
         TESTING: "true"
         DATABASE_URL: "sqlite+aiosqlite:///:memory:"
         WEBHOOK_SECRET: "test_secret_key_for_ci_minimum_32_chars"
         BASE_URL: "http://test"
       run: |
+        # Run tests
         pytest tests/ \
           --ignore=tests/test_payment.py \
           -v \
@@ -51,7 +53,17 @@ jobs:
           --cov=app \
           --cov-report=term \
           --cov-report=xml \
-          --timeout=30
+          --timeout=30 &
+        
+        # Get pytest PID
+        PYTEST_PID=$!
+        
+        # Wait for pytest to finish
+        wait $PYTEST_PID
+        PYTEST_EXIT_CODE=$?
+        
+        # Exit with pytest's exit code
+        exit $PYTEST_EXIT_CODE
 
     - name: Upload coverage reports
       uses: codecov/codecov-action@v3

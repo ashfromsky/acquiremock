@@ -11,7 +11,8 @@ from slowapi.errors import RateLimitExceeded
 
 from app.database.core.session import engine
 from app.functional.main_functions import init_db
-from app.services.background_tasks import start_background_tasks
+from app.services.background_tasks import start_background_tasks, retry_failed_webhooks_task, \
+    expire_pending_payments_task
 from app.models.errors import PaymentError
 from app.core.limiter import limiter
 from app.security.middleware import SecurityHeadersMiddleware
@@ -43,14 +44,20 @@ async def lifespan(app: FastAPI):
     await init_db(engine)
     logger.info("Database initialized successfully.")
 
+    background_tasks = []
     if not TESTING:
-        asyncio.create_task(start_background_tasks())
+        background_tasks.append(asyncio.create_task(expire_pending_payments_task()))
+        background_tasks.append(asyncio.create_task(retry_failed_webhooks_task()))
         logger.info("Background tasks started")
     else:
         logger.info("Skipping background tasks (testing mode)")
 
     yield
+
     logger.info("Shutting down application...")
+    for task in background_tasks:
+        task.cancel()
+    await asyncio.gather(*background_tasks, return_exceptions=True)
 
 
 app = FastAPI(
