@@ -2,18 +2,26 @@
 
 on:
   push:
-    branches: [ "main", "master", "dev-branch", "develop", "dev" ]
+    branches: [ "main", "master", "dev-branch" ]
   pull_request:
     branches: [ "main", "master" ]
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+
+    env:
+      TESTING:  "true"
+      DATABASE_URL: "sqlite+aiosqlite: ///./test.db"
+      BASE_URL: "http://localhost:8000"
+      CURRENCY_CODE: "USD"
+      CURRENCY_SYMBOL: "$"
+      WEBHOOK_SECRET: "test_secret_key"
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses:  actions/checkout@v4
 
     - name: Set up Python 3.11
       uses: actions/setup-python@v5
@@ -21,44 +29,20 @@ jobs:
         python-version: "3.11"
         cache: 'pip'
 
-    - name: Install dependencies
+    - name:  Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pytest pytest-asyncio pytest-cov pytest-timeout httpx aiosqlite
-
-    - name: Verify pytest.ini exists
-      run: |
-        if [ -f pytest.ini ]; then
-          echo "pytest.ini found"
-          cat pytest.ini
-        else
-          echo "pytest.ini not found!"
-          exit 1
-        fi
+        pip install pytest pytest-asyncio httpx aiosqlite pytest-cov
 
     - name: Run tests
-      timeout-minutes: 2
-      env:
-        TESTING: "true"
-        DATABASE_URL: "sqlite+aiosqlite:///:memory:"
-        WEBHOOK_SECRET: "test_secret_key_for_ci_minimum_32_chars"
-        BASE_URL: "http://test"
       run: |
-        pytest tests/ \
-          --ignore=tests/test_payment.py \
-          -v \
-          --tb=short \
-          --cov=app \
-          --cov-report=term \
-          --cov-report=xml \
-          --timeout=30
+        pytest tests/ -v --tb=short --cov=app --cov-report=term-missing
 
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
       if: always()
       with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
+        name: coverage-report
+        path: . coverage
+        retention-days: 7

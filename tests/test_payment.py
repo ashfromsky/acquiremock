@@ -1,116 +1,92 @@
-﻿import requests
-import json
-import webbrowser
-from datetime import datetime
-import random
-import pytest
+﻿import pytest
+from httpx import AsyncClient
+from datetime import datetime, timedelta
 
-API_URL = "http://localhost:8000"
-WEBHOOK_URL = "https://webhook.site/unique-id"
-REDIRECT_URL = "http://localhost:8000"
-
-def test_create_invoice():
-    print("🧪 Тестування AcquireMock Payment Gateway\n")
-    print("=" * 50)
-
-    rand_amount = random.randint(100, 1000)
-
-    payload = {
-        "amount": rand_amount,
-        "reference": f"TEST-{datetime.now().strftime('%Y%m%d%H%M%S')}",
-        "webhook_url": WEBHOOK_URL,
-        "redirect_url": REDIRECT_URL
-    }
-
-    print("\n📤 Відправляю запит на створення invoice...")
-    print(f"URL: {API_URL}/api/create-invoice")
-    print(f"Payload: {json.dumps(payload, indent=2)}\n")
-
-    try:
-        response = requests.post(
-            f"{API_URL}/api/create-invoice",
-            json=payload,
-            timeout=10
-        )
-
-        response.raise_for_status()
-
-        data = response.json()
-
-        print("✅ Invoice успішно створено!")
-        print(f"\n📋 Відповідь сервера:")
-        print(json.dumps(data, indent=2))
-
-        page_url = data.get("pageUrl")
-
-        if page_url:
-            print(f"\n🔗 URL сторінки оплати:")
-            print(page_url)
-
-            print("\n" + "=" * 50)
-            choice = input("Відкрити сторінку оплати в браузері? (y/n): ")
-
-            if choice.lower() == 'y':
-                print("\n🌐 Відкриваю браузер...")
-                webbrowser.open(page_url)
-
-                print("\n💡 Підказки для тестування:")
-                print("   ✓ Для успішної оплати: 4444 4444 4444 4444")
-                print("   ✓ Термін дії: будь-який (наприклад, 12/25)")
-                print("   ✓ CVV: будь-який (наприклад, 123)")
-                print("   ✓ Інші картки викличуть помилку 'Insufficient funds'")
-
-                print(f"\n🔔 Webhook буде відправлено на:")
-                print(f"   {WEBHOOK_URL}")
-                print("   Відкрийте цей URL щоб побачити webhook дані")
-            else:
-                print("\n👋 Скопіюйте URL вище та відкрийте вручну")
-
-    except requests.exceptions.ConnectionError:
-        print("❌ Помилка: Не можу підключитися до сервера")
-        print("   Перевірте чи запущений FastAPI на http://localhost:8000")
-        print("   Запустіть: uvicorn main:app --port 8000 --reload")
-
-    except requests.exceptions.HTTPError as e:
-        print(f"❌ HTTP Помилка: {e}")
-        try:
-            print(f"Статус код: {response.status_code}")
-            print(f"Відповідь: {response.text}")
-        except:
-            pass
-
-    except Exception as e:
-        print(f"❌ Несподівана помилка: {e}")
+from app.models.main_models import Payment, PaymentStatus
+from app.security.crypto import generate_secure_otp, hash_sensitive_data, verify_sensitive_data
 
 
-def test_health_check():
-    print("\n🏥 Перевірка доступності сервера...")
-
-    try:
-        response = requests.get(f"{API_URL}/health", timeout=5)
-        response.raise_for_status()
-        data = response.json()
-
-        print("✅ Сервер працює!")
-        assert data.get('status') == 'ok'
-        assert 'timestamp' in data
-
-    except Exception as e:
-        pytest.fail(f"❌ Сервер не відповідає: {e}")
+@pytest.mark.asyncio
+async def test_payment_creation_flow(client: AsyncClient, sample_invoice_data):
+    response = await client.post("/api/create-invoice", json=sample_invoice_data)
+    assert response.status_code == 200
+    data = response.json()
+    assert "pageUrl" in data
 
 
-if __name__ == "__main__":
-    print("""
-    ╔═══════════════════════════════════════╗
-    ║   AcquireMock Payment Gateway Test   ║
-    ╚═══════════════════════════════════════╝
-    """)
+@pytest.mark.asyncio
+async def test_payment_status_enum():
+    assert PaymentStatus.PENDING == "pending"
+    assert PaymentStatus.WAITING_FOR_OTP == "waiting_for_otp"
+    assert PaymentStatus.PAID == "paid"
+    assert PaymentStatus.FAILED == "failed"
+    assert PaymentStatus.EXPIRED == "expired"
+    assert PaymentStatus.REFUNDED == "refunded"
 
-    if test_health_check():
-        test_create_invoice()
-    else:
-        print("\n💡 Запустіть FastAPI сервер:")
-        print("   uvicorn main:app --port 8000 --reload")
 
-    print("\n" + "=" * 50)
-    print("Тестування завершено\n")
+@pytest.mark.asyncio
+async def test_payment_model_defaults():
+    payment = Payment(
+        id="test-payment-123",
+        amount=10000,
+        reference="ORDER-TEST",
+        webhook_url="https://example.com/webhook",
+        redirect_url="https://example.com/success"
+    )
+    assert payment. status == PaymentStatus.PENDING
+    assert payment.webhook_attempts == 0
+    assert payment.otp_code is None
+    assert payment.card_mask is None
+
+
+@pytest. mark.asyncio
+async def test_payment_expiry_time():
+    payment = Payment(
+        id="test-payment-456",
+        amount=5000,
+        reference="ORDER-EXPIRY",
+        webhook_url="https://example.com/webhook",
+        redirect_url="https://example.com/success"
+    )
+    assert payment.expires_at > datetime.utcnow()
+    assert payment.expires_at < datetime.utcnow() + timedelta(minutes=20)
+
+
+def test_otp_generation():
+    otp = generate_secure_otp()
+    assert len(otp) == 4
+    assert otp.isdigit()
+
+
+def test_otp_generation_custom_length():
+    otp = generate_secure_otp(length=6)
+    assert len(otp) == 6
+    assert otp.isdigit()
+
+
+def test_password_hashing():
+    password = "test_password_123"
+    hashed = hash_sensitive_data(password)
+    assert hashed != password
+    assert verify_sensitive_data(password, hashed)
+
+
+def test_password_verification_fails_wrong_password():
+    password = "correct_password"
+    wrong_password = "wrong_password"
+    hashed = hash_sensitive_data(password)
+    assert not verify_sensitive_data(wrong_password, hashed)
+
+
+@pytest.mark.asyncio
+async def test_multiple_invoices_creation(client: AsyncClient):
+    for i in range(3):
+        invoice_data = {
+            "amount": 1000 * (i + 1),
+            "reference": f"ORDER-MULTI-{i}",
+            "webhookUrl": "https://example.com/webhook",
+            "redirectUrl": "https://example.com/success"
+        }
+        response = await client.post("/api/create-invoice", json=invoice_data)
+        assert response.status_code == 200
+        assert "pageUrl" in response.json()

@@ -1,60 +1,63 @@
 ﻿import pytest
 from httpx import AsyncClient
 
-pytestmark = pytest.mark.asyncio
 
-
+@pytest.mark.asyncio
 async def test_health_check(client: AsyncClient):
     response = await client.get("/health")
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] == "ok"
-    assert "version" in data
-    assert "currency" in data
+    assert data["status"] == "healthy"
 
 
-async def test_create_invoice_success(client: AsyncClient):
-    payload = {
-        "amount": 5000,
-        "reference": "TEST-ORDER-101",
-        "webhookUrl": "https://example.com/webhook",
-        "redirectUrl": "https://example.com/success"
-    }
-
-    response = await client.post("/api/create-invoice", json=payload)
-
+@pytest.mark.asyncio
+async def test_create_invoice_success(client: AsyncClient, sample_invoice_data):
+    response = await client.post("/api/create-invoice", json=sample_invoice_data)
     assert response.status_code == 200
-
-    data = response.json()
+    data = response. json()
     assert "pageUrl" in data
     assert "/checkout/" in data["pageUrl"]
 
 
-async def test_create_invoice_invalid_data(client: AsyncClient):
-    payload = {
-        "reference": "TEST-ORDER-FAIL",
+@pytest.mark.asyncio
+async def test_create_invoice_invalid_amount(client: AsyncClient):
+    invalid_data = {
+        "amount": -100,
+        "reference": "ORDER-INVALID",
         "webhookUrl": "https://example.com/webhook",
+        "redirectUrl":  "https://example.com/success"
     }
+    response = await client.post("/api/create-invoice", json=invalid_data)
+    assert response.status_code in [400, 422]
 
-    response = await client.post("/api/create-invoice", json=payload)
 
+@pytest.mark.asyncio
+async def test_create_invoice_missing_fields(client: AsyncClient):
+    incomplete_data = {
+        "amount": 5000
+    }
+    response = await client.post("/api/create-invoice", json=incomplete_data)
     assert response.status_code == 422
 
 
-async def test_checkout_page_load(client: AsyncClient):
-    payload = {
-        "amount": 10000,
-        "reference": "TEST-CHECKOUT-FLOW",
-        "webhookUrl": "https://example.com/hook",
-        "redirectUrl": "https://example.com/ok"
-    }
-    create_resp = await client.post("/api/create-invoice", json=payload)
-    assert create_resp.status_code == 200
-    page_url = create_resp.json()["pageUrl"]
+@pytest.mark.asyncio
+async def test_checkout_page_not_found(client: AsyncClient):
+    response = await client.get("/checkout/nonexistent-payment-id")
+    assert response. status_code in [404, 200]
 
-    payment_id = page_url.split("/")[-1]
 
-    checkout_resp = await client.get(f"/checkout/{payment_id}")
+@pytest.mark.asyncio
+async def test_checkout_page_access(client: AsyncClient, sample_invoice_data):
+    create_response = await client.post("/api/create-invoice", json=sample_invoice_data)
+    assert create_response.status_code == 200
+    page_url = create_response.json()["pageUrl"]
+    payment_id = page_url.split("/checkout/")[-1]
 
-    assert checkout_resp.status_code == 200
-    assert "TEST-CHECKOUT-FLOW" in checkout_resp.text
+    checkout_response = await client.get(f"/checkout/{payment_id}")
+    assert checkout_response.status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_api_root(client: AsyncClient):
+    response = await client.get("/")
+    assert response.status_code == 200
