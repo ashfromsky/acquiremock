@@ -3,4 +3,3 @@
 .git
 .env
 venv/
-app/static/
