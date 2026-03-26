@@ -9,12 +9,11 @@ from app.models.main_models import WebhookLog, Payment
 from app.functional.main_functions import log_webhook, update_payment
 import os
 from dotenv import load_dotenv
+from app.core.config import WEBHOOK_SECRET
 
 load_dotenv()
 
 logger = logging.getLogger(__name__)
-
-WEBHOOK_SECRET = os.getenv('WEBHOOK_SECRET', 'default_secret_key_change_in_production')
 
 
 def generate_webhook_signature(payload: dict, secret: str = WEBHOOK_SECRET) -> str:
