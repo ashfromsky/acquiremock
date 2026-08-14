@@ -17,7 +17,7 @@ async def test_create_invoice_success(client: AsyncClient):
     payload = {
         "amount": 5000,
         "reference": "TEST-ORDER-101",
-        "webhookUrl": "https://example.com/webhook",
+        "webhookUrl": "https://93.184.216.34/webhook",
         "redirectUrl": "https://example.com/success"
     }
 
@@ -45,7 +45,7 @@ async def test_checkout_page_load(client: AsyncClient):
     payload = {
         "amount": 10000,
         "reference": "TEST-CHECKOUT-FLOW",
-        "webhookUrl": "https://example.com/hook",
+        "webhookUrl": "https://93.184.216.34/hook",
         "redirectUrl": "https://example.com/ok"
     }
     create_resp = await client.post("/api/create-invoice", json=payload)

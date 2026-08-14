@@ -1,5 +1,4 @@
-﻿from fastapi import HTTPException
-from typing import Optional
+﻿from typing import Optional
 
 class PaymentError(Exception):
     def __init__(self, code: str, message: str, status_code: int = 400, payment_id: Optional[str] = None):
@@ -78,4 +77,12 @@ class SavedCardNotFoundError(PaymentError):
             code="SAVED_CARD_NOT_FOUND",
             message=f"Saved card {card_id} not found",
             status_code=404
+        )
+
+class UnsafeWebhookURLError(PaymentError):
+    def __init__(self):
+        super().__init__(
+            code="UNSAFE_WEBHOOK_URL",
+            message="Webhook destination is not allowed",
+            status_code=400
         )

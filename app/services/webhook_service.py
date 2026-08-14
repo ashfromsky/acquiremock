@@ -7,9 +7,9 @@ from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.main_models import WebhookLog, Payment
 from app.functional.main_functions import log_webhook, update_payment
-import os
 from dotenv import load_dotenv
 from app.core.config import WEBHOOK_SECRET
+from app.security.outbound_requests import UnsafeOutboundURL, post_to_safe_destination
 
 load_dotenv()
 
@@ -56,44 +56,66 @@ async def send_webhook_with_retry(
 
     attempt = payment.webhook_attempts + 1
 
-    logger.info(f"Sending webhook to {webhook_url} for payment {payment.id}, attempt {attempt}")
+    logger.info(f"Sending webhook for payment {payment.id}, attempt {attempt}")
 
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(
-                webhook_url,
-                json=webhook_data,
-                headers=headers
-            )
+        response = await post_to_safe_destination(
+            webhook_url,
+            json=webhook_data,
+            headers=headers,
+            timeout=timeout
+        )
 
-            success = response.status_code in [200, 201, 202, 204]
+        success = response.status_code in [200, 201, 202, 204]
 
-            webhook_log = WebhookLog(
-                payment_id=payment.id,
-                webhook_url=webhook_url,
-                payload=json.dumps(webhook_data),
-                response_status=response.status_code,
-                response_body=response.text[:1000],
-                signature=signature,
-                attempt_number=attempt,
-                success=success
-            )
+        webhook_log = WebhookLog(
+            payment_id=payment.id,
+            webhook_url=webhook_url,
+            payload=json.dumps(webhook_data),
+            response_status=response.status_code,
+            response_body=response.text[:1000],
+            signature=signature,
+            attempt_number=attempt,
+            success=success
+        )
 
-            await log_webhook(db, webhook_log)
+        await log_webhook(db, webhook_log)
 
-            payment.webhook_attempts = attempt
-            payment.webhook_last_attempt = datetime.utcnow()
+        payment.webhook_attempts = attempt
+        payment.webhook_last_attempt = datetime.utcnow()
 
-            if success:
-                payment.webhook_status = "success"
-                logger.info(f"Webhook sent successfully. Status: {response.status_code}")
-            else:
-                payment.webhook_status = "failed"
-                logger.error(f"Webhook failed with status {response.status_code}")
+        if success:
+            payment.webhook_status = "success"
+            logger.info(f"Webhook sent successfully. Status: {response.status_code}")
+        else:
+            payment.webhook_status = "failed"
+            logger.error(f"Webhook failed with status {response.status_code}")
 
-            await update_payment(db, payment)
+        await update_payment(db, payment)
 
-            return success
+        return success
+
+    except UnsafeOutboundURL:
+        logger.warning(f"Blocked unsafe webhook destination for payment {payment.id}")
+
+        webhook_log = WebhookLog(
+            payment_id=payment.id,
+            webhook_url=webhook_url,
+            payload=json.dumps(webhook_data),
+            signature=signature,
+            attempt_number=attempt,
+            success=False,
+            error_message="UNSAFE_WEBHOOK_URL"
+        )
+
+        await log_webhook(db, webhook_log)
+
+        payment.webhook_attempts = attempt
+        payment.webhook_last_attempt = datetime.utcnow()
+        payment.webhook_status = "failed"
+        await update_payment(db, payment)
+
+        return False
 
     except httpx.TimeoutException:
         logger.error(f"Webhook timeout for payment {payment.id}")
@@ -117,8 +139,8 @@ async def send_webhook_with_retry(
 
         return False
 
-    except Exception as e:
-        logger.error(f"Webhook error for payment {payment.id}: {str(e)}")
+    except httpx.ConnectError:
+        logger.error(f"Webhook connection failed for payment {payment.id}")
 
         webhook_log = WebhookLog(
             payment_id=payment.id,
@@ -127,7 +149,54 @@ async def send_webhook_with_retry(
             signature=signature,
             attempt_number=attempt,
             success=False,
-            error_message=str(e)
+            error_message="Connection failure"
+        )
+
+        await log_webhook(db, webhook_log)
+
+        payment.webhook_attempts = attempt
+        payment.webhook_last_attempt = datetime.utcnow()
+        payment.webhook_status = "failed"
+        await update_payment(db, payment)
+
+        return False
+
+    except httpx.HTTPError:
+        logger.error(f"Webhook HTTP request failed for payment {payment.id}")
+
+        webhook_log = WebhookLog(
+            payment_id=payment.id,
+            webhook_url=webhook_url,
+            payload=json.dumps(webhook_data),
+            signature=signature,
+            attempt_number=attempt,
+            success=False,
+            error_message="HTTP request failure"
+        )
+
+        await log_webhook(db, webhook_log)
+
+        payment.webhook_attempts = attempt
+        payment.webhook_last_attempt = datetime.utcnow()
+        payment.webhook_status = "failed"
+        await update_payment(db, payment)
+
+        return False
+
+    except Exception as e:
+        logger.error(
+            f"Unexpected webhook error for payment {payment.id}: "
+            f"{type(e).__name__}"
+        )
+
+        webhook_log = WebhookLog(
+            payment_id=payment.id,
+            webhook_url=webhook_url,
+            payload=json.dumps(webhook_data),
+            signature=signature,
+            attempt_number=attempt,
+            success=False,
+            error_message="Unexpected webhook error"
         )
 
         await log_webhook(db, webhook_log)

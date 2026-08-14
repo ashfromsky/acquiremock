@@ -14,10 +14,10 @@ from app.models.invoice import CreateInvoiceRequest, CreateInvoiceResponse
 from app.models.errors import (
     PaymentNotFoundError,
     PaymentAlreadyProcessedError,
-    PaymentExpiredError,
     CSRFTokenMismatchError,
     InsufficientFundsError,
-    SavedCardNotFoundError
+    SavedCardNotFoundError,
+    UnsafeWebhookURLError
 )
 from app.models.main_models import Payment, SavedCard
 from app.functional.main_functions import (
@@ -27,8 +27,8 @@ from app.functional.main_functions import (
     get_payment_by_idempotency
 )
 from app.security.sanitizer import clean_input
+from app.security.outbound_requests import UnsafeOutboundURL, validate_outbound_url
 from app.security.crypto import (
-    generate_csrf_token,
     generate_secure_otp,
     hash_sensitive_data,
     verify_sensitive_data
@@ -92,6 +92,13 @@ async def finalize_successful_payment(
 async def create_invoice(invoice: CreateInvoiceRequest, db: AsyncSession = Depends(get_db)):
     clean_reference = clean_input(invoice.reference)
     logger.info(f"Creating invoice for amount {invoice.amount}, ref {clean_reference}")
+
+    try:
+        await validate_outbound_url(invoice.webhook_url)
+    except UnsafeOutboundURL as exc:
+        logger.warning("Blocked unsafe webhook destination during invoice creation")
+        raise UnsafeWebhookURLError() from exc
+
     payment_id = str(uuid.uuid4())
 
     payment = Payment(
