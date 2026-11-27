@@ -99,3 +99,13 @@ class IdempotencyInProgressError(PaymentError):
             status_code=409,
             payment_id=payment_id,
         )
+
+
+class OTPMaxAttemptsError(PaymentError):
+    def __init__(self, payment_id: str, message: str = "Maximum OTP attempts exceeded"):
+        super().__init__(
+            code="OTP_MAX_ATTEMPTS_EXCEEDED",
+            message=message,
+            status_code=429,
+            payment_id=payment_id,
+        )

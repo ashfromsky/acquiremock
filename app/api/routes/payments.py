@@ -48,6 +48,7 @@ from app.services.smtp_service import send_otp_email
 from app.core.config import BASE_URL, COOKIE_SECURE, CURRENCY_CODE, CURRENCY_SYMBOL
 from app.core.currency import format_minor_amount
 from app.core.limiter import limiter
+from app.core.time import utcnow
 
 logger = logging.getLogger(__name__)
 templates = Jinja2Templates(directory="templates/pages")
@@ -316,8 +317,12 @@ async def _execute_payment_submission(
             return response
 
         otp_code = generate_secure_otp()
+        now = utcnow()
         payment.otp_code = otp_code
-        payment.status = "waiting_for_otp"
+        payment.otp_attempts = 0
+        payment.otp_resend_count = 0
+        payment.otp_expires_at = min(now + timedelta(minutes=5), payment.expires_at)
+        payment.status = PaymentStatus.WAITING_FOR_OTP.value
         await update_payment(db, payment)
 
         if claimed_key is not None:

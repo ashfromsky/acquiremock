@@ -1,8 +1,8 @@
 import pytest
 from httpx import AsyncClient
+from sqlmodel import select
 
-from app.api.routes import auth as auth_routes
-from app.models.main_models import Payment, SavedCard
+from app.models.main_models import AuthChallenge, Payment, SavedCard
 from app.security.crypto import create_signed_email_token, hash_sensitive_data
 from tests.conftest import login_as_admin
 
@@ -22,14 +22,32 @@ async def test_user_info_requires_signed_session(client: AsyncClient):
     assert allowed.json() == {"operations": [], "cards": []}
 
 
-async def test_auth_code_sets_cookie_and_locks_after_attempts(client: AsyncClient):
-    auth_routes.login_store.clear()
+async def test_auth_code_sets_cookie_and_locks_after_attempts(
+    client: AsyncClient,
+    db_session,
+    monkeypatch,
+):
+    sent_codes: list[str] = []
+
+    async def fake_send_otp(email: str, code: str):
+        sent_codes.append(code)
+
+    monkeypatch.setattr("app.api.routes.auth.send_otp_email", fake_send_otp)
 
     send_resp = await client.post("/api/auth/send-code", json={"email": "user@example.com"})
     assert send_resp.status_code == 200
-    code = auth_routes.login_store["user@example.com"]["code"]
+    assert len(sent_codes) == 1
+    code = sent_codes[-1]
 
-    for attempt in range(4):
+    challenge = (
+        await db_session.execute(
+            select(AuthChallenge).where(AuthChallenge.email == "user@example.com")
+        )
+    ).scalars().first()
+    assert challenge is not None
+    assert challenge.code_hash != code
+
+    for _attempt in range(4):
         bad = await client.post(
             "/api/auth/verify-code",
             json={"email": "user@example.com", "code": "0000" if code != "0000" else "9999"},
@@ -41,10 +59,17 @@ async def test_auth_code_sets_cookie_and_locks_after_attempts(client: AsyncClien
         json={"email": "user@example.com", "code": "0000" if code != "0000" else "9999"},
     )
     assert locked.status_code == 429
-    assert "user@example.com" not in auth_routes.login_store
+
+    db_session.expire_all()
+    remaining = (
+        await db_session.execute(
+            select(AuthChallenge).where(AuthChallenge.email == "user@example.com")
+        )
+    ).scalars().first()
+    assert remaining is None
 
     await client.post("/api/auth/send-code", json={"email": "user@example.com"})
-    fresh_code = auth_routes.login_store["user@example.com"]["code"]
+    fresh_code = sent_codes[-1]
     ok = await client.post(
         "/api/auth/verify-code",
         json={"email": "user@example.com", "code": fresh_code},
