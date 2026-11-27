@@ -1,5 +1,4 @@
-﻿import asyncio
-import os
+﻿import os
 from typing import AsyncGenerator
 
 import pytest
@@ -10,9 +9,12 @@ from sqlmodel import SQLModel
 
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["TESTING"] = "true"
+os.environ.setdefault("WEBHOOK_SECRET", "test-webhook-secret-key-at-least-32-chars")
 
-from app.main_test import app
+import app.database.core.session as db_session_module
+from app.core.limiter import limiter
 from app.database.core.session import get_db
+from app.main_test import app
 
 test_engine = create_async_engine(
     "sqlite+aiosqlite:///:memory:",
@@ -29,7 +31,6 @@ TestSessionLocal = sessionmaker(
 
 @pytest.fixture(scope="function")
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    """Create database session for each test."""
     async with test_engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
@@ -39,14 +40,19 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     async with test_engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.drop_all)
 
+    await test_engine.dispose()
+
 
 @pytest.fixture(scope="function")
 async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
-    """Create test HTTP client."""
     async def override_get_db():
         yield db_session
 
+    original_session_local = db_session_module.AsyncSessionLocal
+    db_session_module.AsyncSessionLocal = TestSessionLocal
     app.dependency_overrides[get_db] = override_get_db
+    if hasattr(limiter, "_storage"):
+        limiter._storage.reset()
 
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -56,10 +62,4 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
         yield c
 
     app.dependency_overrides.clear()
-
-
-def pytest_sessionfinish(session, exitstatus):
-    """Force exit after tests complete to prevent hanging."""
-    import sys
-    if exitstatus == 0:
-        sys.exit(0)
+    db_session_module.AsyncSessionLocal = original_session_local

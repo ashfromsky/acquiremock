@@ -27,19 +27,11 @@ jobs:
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         pip install pytest pytest-asyncio httpx aiosqlite
 
-    - name: Configure pytest
-      run: |
-        echo "[pytest]" > pytest.ini
-        echo "pythonpath = ." >> pytest.ini
-        echo "asyncio_mode = auto" >> pytest.ini
-        echo "asyncio_default_fixture_loop_scope = function" >> pytest.ini
-        echo "addopts = --ignore=tests/test_payment.py" >> pytest.ini
-        echo "filterwarnings =" >> pytest.ini
-        echo "    ignore::pytest.PytestRemovedIn9Warning" >> pytest.ini
-
     - name: Run tests with timeout
       run: |
         export TESTING=true
+        export DATABASE_URL=sqlite+aiosqlite:///:memory:
+        export WEBHOOK_SECRET=ci_test_webhook_secret_key_min_32_chars
         timeout 60s pytest -v --tb=short || exit_code=$?
         if [ $exit_code -eq 124 ]; then
           echo "::error::Tests timed out after 60 seconds"
