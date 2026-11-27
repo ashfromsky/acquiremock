@@ -28,7 +28,7 @@ from app.functional.main_functions import (
     update_payment,
     get_payment_by_idempotency
 )
-from app.security.sanitizer import clean_input
+from app.security.sanitizer import validate_reference
 from app.security.crypto import (
     create_signed_email_token,
     generate_csrf_token,
@@ -99,7 +99,7 @@ async def create_invoice(
         invoice: CreateInvoiceRequest,
         db: AsyncSession = Depends(get_db)
 ):
-    clean_reference = clean_input(invoice.reference)
+    clean_reference = validate_reference(invoice.reference)
     logger.info(f"Creating invoice for amount {invoice.amount}, ref {clean_reference}")
     payment_id = str(uuid.uuid4())
 

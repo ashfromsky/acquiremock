@@ -1,3 +1,5 @@
+import socket
+
 import httpx
 import pytest
 from httpx import AsyncClient
@@ -102,6 +104,10 @@ async def test_console_payments_filter_detail_and_webhook_retry(
             return httpx.Response(200, text="received")
         return await orig_post(self, url, *args, **kwargs)
 
+    async def fake_getaddrinfo(self, host, port, *args, **kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port))]
+
+    monkeypatch.setattr("asyncio.base_events.BaseEventLoop.getaddrinfo", fake_getaddrinfo)
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
     retry = await client.post(
         "/api/console/webhooks/pay-det-1/retry",

@@ -42,16 +42,20 @@ TestSessionLocal = sessionmaker(
 
 @pytest.fixture(scope="function")
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
+    original_session_local = db_session_module.AsyncSessionLocal
+    db_session_module.AsyncSessionLocal = TestSessionLocal
+
     async with test_engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
 
-    async with TestSessionLocal() as session:
-        yield session
-
-    async with test_engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.drop_all)
-
-    await test_engine.dispose()
+    try:
+        async with TestSessionLocal() as session:
+            yield session
+    finally:
+        db_session_module.AsyncSessionLocal = original_session_local
+        async with test_engine.begin() as conn:
+            await conn.run_sync(SQLModel.metadata.drop_all)
+        await test_engine.dispose()
 
 
 @pytest.fixture(scope="function")
@@ -59,8 +63,6 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     async def override_get_db():
         yield db_session
 
-    original_session_local = db_session_module.AsyncSessionLocal
-    db_session_module.AsyncSessionLocal = TestSessionLocal
     app.dependency_overrides[get_db] = override_get_db
     if hasattr(limiter, "_storage"):
         limiter._storage.reset()
@@ -73,7 +75,6 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
         yield c
 
     app.dependency_overrides.clear()
-    db_session_module.AsyncSessionLocal = original_session_local
 
 
 async def login_as_admin(client: AsyncClient) -> str:

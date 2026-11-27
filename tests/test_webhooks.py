@@ -1,3 +1,5 @@
+import socket
+
 import httpx
 import pytest
 from httpx import AsyncClient
@@ -69,12 +71,16 @@ async def test_dispatch_webhook_success_and_failure(
 
     captured = {}
 
+    async def fake_getaddrinfo(self, host, port, *args, **kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port))]
+
     async def fake_post_success(self, url, content=None, headers=None, **kwargs):
         captured["url"] = url
         captured["content"] = content
         captured["headers"] = headers
         return httpx.Response(200, text="ok")
 
+    monkeypatch.setattr("asyncio.base_events.BaseEventLoop.getaddrinfo", fake_getaddrinfo)
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post_success)
     ok = await dispatch_webhook("pay-wh-1")
     assert ok is True

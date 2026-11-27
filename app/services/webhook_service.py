@@ -2,16 +2,19 @@
 import hmac
 import json
 import logging
-from datetime import datetime
+from typing import Optional
 
-import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import app.core.config as config
 import app.database.core.session as db_session_module
-from app.core.config import WEBHOOK_SECRET
+from app.core.time import utcnow
 from app.functional.main_functions import get_payment, log_webhook, update_payment
 from app.models.main_models import Payment, WebhookLog
-from app.security.sanitizer import validate_webhook_url
+from app.security.ssrf import (
+    build_pinned_async_client,
+    resolve_and_validate_webhook_target,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,149 +23,148 @@ def serialize_webhook_payload(payload: dict) -> str:
     return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
-def generate_webhook_signature(payload: dict, secret: str = WEBHOOK_SECRET) -> str:
+def generate_webhook_signature(payload: dict, secret: Optional[str] = None) -> str:
+    signing_secret = config.WEBHOOK_SECRET if secret is None else secret
     message = serialize_webhook_payload(payload)
     return hmac.new(
-        secret.encode(),
-        message.encode(),
-        hashlib.sha256
+        signing_secret.encode("utf-8"),
+        message.encode("utf-8"),
+        hashlib.sha256,
     ).hexdigest()
 
 
 async def send_webhook_with_retry(
-        payment: Payment,
-        db: AsyncSession,
-        timeout: int = 10
+    payment: Payment,
+    db: AsyncSession,
+    timeout: int = config.WEBHOOK_TIMEOUT_SECONDS,
 ) -> bool:
     webhook_url = payment.webhook_url
 
     if not webhook_url:
-        logger.warning(f"No webhook URL for payment {payment.id}")
+        logger.warning("No webhook URL for payment %s", payment.id)
         return False
 
-    try:
-        webhook_url = validate_webhook_url(webhook_url)
-    except ValueError as e:
-        logger.error(f"Blocked invalid webhook URL for payment {payment.id}: {e}")
-        payment.webhook_attempts = payment.webhook_attempts + 1
-        payment.webhook_last_attempt = datetime.utcnow()
-        payment.webhook_status = "failed"
-        await update_payment(db, payment)
-        return False
+    now = utcnow()
+    attempt = payment.webhook_attempts + 1
 
     webhook_data = {
         "payment_id": payment.id,
         "reference": payment.reference,
         "amount": payment.amount,
         "status": payment.status,
-        "timestamp": datetime.utcnow().isoformat(),
-        "card_mask": payment.card_mask
+        "timestamp": now.isoformat(),
+        "card_mask": payment.card_mask,
     }
 
     payload_body = serialize_webhook_payload(webhook_data)
     signature = generate_webhook_signature(webhook_data)
 
+    try:
+        target = await resolve_and_validate_webhook_target(webhook_url)
+    except ValueError as exc:
+        logger.error("Blocked unsafe webhook URL for payment %s: %s", payment.id, exc)
+        webhook_log = WebhookLog(
+            payment_id=payment.id,
+            webhook_url=webhook_url,
+            payload=payload_body,
+            signature=signature,
+            attempt_number=attempt,
+            success=False,
+            error_message=str(exc)[:500],
+        )
+        await log_webhook(db, webhook_log)
+        payment.webhook_attempts = attempt
+        payment.webhook_last_attempt = now
+        payment.webhook_status = "failed"
+        await update_payment(db, payment)
+        return False
+
     headers = {
         "Content-Type": "application/json",
         "X-Signature": signature,
-        "X-Payment-ID": payment.id
+        "X-Payment-ID": payment.id,
     }
 
-    attempt = payment.webhook_attempts + 1
-
-    logger.info(f"Sending webhook to {webhook_url} for payment {payment.id}, attempt {attempt}")
+    logger.info(
+        "Sending webhook to %s (pinned=%s) for payment %s, attempt %s",
+        target.url,
+        target.pinned_ip,
+        payment.id,
+        attempt,
+    )
 
     try:
-        async with httpx.AsyncClient(timeout=timeout, follow_redirects=False) as client:
+        async with build_pinned_async_client(target, timeout=timeout) as client:
             response = await client.post(
-                webhook_url,
+                target.url,
                 content=payload_body.encode("utf-8"),
-                headers=headers
+                headers=headers,
             )
 
-            success = response.status_code in [200, 201, 202, 204]
-
-            webhook_log = WebhookLog(
-                payment_id=payment.id,
-                webhook_url=webhook_url,
-                payload=payload_body,
-                response_status=response.status_code,
-                response_body=response.text[:1000],
-                signature=signature,
-                attempt_number=attempt,
-                success=success
-            )
-
-            await log_webhook(db, webhook_log)
-
-            payment.webhook_attempts = attempt
-            payment.webhook_last_attempt = datetime.utcnow()
-
-            if success:
-                payment.webhook_status = "success"
-                logger.info(f"Webhook sent successfully. Status: {response.status_code}")
-            else:
-                payment.webhook_status = "failed"
-                logger.error(f"Webhook failed with status {response.status_code}")
-
-            await update_payment(db, payment)
-
-            return success
-
-    except httpx.TimeoutException:
-        logger.error(f"Webhook timeout for payment {payment.id}")
+        if 300 <= response.status_code < 400:
+            success = False
+            error_msg = f"Redirect responses are not allowed (HTTP {response.status_code})"
+        else:
+            success = response.status_code in (200, 201, 202, 204)
+            error_msg = None if success else f"Unexpected HTTP status {response.status_code}"
 
         webhook_log = WebhookLog(
             payment_id=payment.id,
-            webhook_url=webhook_url,
+            webhook_url=target.url,
+            payload=payload_body,
+            response_status=response.status_code,
+            response_body=response.text[:1000],
+            signature=signature,
+            attempt_number=attempt,
+            success=success,
+            error_message=error_msg,
+        )
+        await log_webhook(db, webhook_log)
+
+        payment.webhook_attempts = attempt
+        payment.webhook_last_attempt = utcnow()
+        payment.webhook_status = "success" if success else "failed"
+        await update_payment(db, payment)
+        return success
+
+    except Exception as exc:
+        error_msg = "Request timeout" if "Timeout" in type(exc).__name__ else str(exc)[:500]
+        logger.error("Webhook delivery error for payment %s: %s", payment.id, error_msg)
+
+        webhook_log = WebhookLog(
+            payment_id=payment.id,
+            webhook_url=target.url,
             payload=payload_body,
             signature=signature,
             attempt_number=attempt,
             success=False,
-            error_message="Request timeout"
+            error_message=error_msg,
         )
-
         await log_webhook(db, webhook_log)
 
         payment.webhook_attempts = attempt
-        payment.webhook_last_attempt = datetime.utcnow()
+        payment.webhook_last_attempt = utcnow()
         payment.webhook_status = "failed"
         await update_payment(db, payment)
-
-        return False
-
-    except Exception as e:
-        logger.error(f"Webhook error for payment {payment.id}: {str(e)}")
-
-        webhook_log = WebhookLog(
-            payment_id=payment.id,
-            webhook_url=webhook_url,
-            payload=payload_body,
-            signature=signature,
-            attempt_number=attempt,
-            success=False,
-            error_message=str(e)
-        )
-
-        await log_webhook(db, webhook_log)
-
-        payment.webhook_attempts = attempt
-        payment.webhook_last_attempt = datetime.utcnow()
-        payment.webhook_status = "failed"
-        await update_payment(db, payment)
-
         return False
 
 
-async def dispatch_webhook(payment_id: str, timeout: int = 10) -> bool:
+async def dispatch_webhook(
+    payment_id: str,
+    timeout: int = config.WEBHOOK_TIMEOUT_SECONDS,
+) -> bool:
     async with db_session_module.AsyncSessionLocal() as db:
         payment = await get_payment(db, payment_id)
         if not payment:
-            logger.warning(f"Cannot dispatch webhook: payment {payment_id} not found")
+            logger.warning("Cannot dispatch webhook: payment %s not found", payment_id)
             return False
         return await send_webhook_with_retry(payment, db, timeout=timeout)
 
 
-def verify_webhook_signature(payload: dict, signature: str, secret: str = WEBHOOK_SECRET) -> bool:
-    expected_signature = generate_webhook_signature(payload, secret)
+def verify_webhook_signature(
+    payload: dict,
+    signature: str,
+    secret: Optional[str] = None,
+) -> bool:
+    expected_signature = generate_webhook_signature(payload, secret=secret)
     return hmac.compare_digest(expected_signature, signature)
