@@ -104,37 +104,11 @@
         const currencySymbol = "{{ currency_symbol }}";
         let currentAuthEmail = "";
 
-        function setCookie(name, value, days) {
-            let expires = "";
-            if (days) {
-                const date = new Date();
-                date.setTime(date.getTime() + (days*24*60*60*1000));
-                expires = "; expires=" + date.toUTCString();
-            }
-            document.cookie = name + "=" + (value || "")  + expires + "; path=/";
-        }
-
-        function getCookie(name) {
-            const nameEQ = name + "=";
-            const ca = document.cookie.split(';');
-            for(let i=0;i < ca.length;i++) {
-                let c = ca[i];
-                while (c.charAt(0)==' ') c = c.substring(1,c.length);
-                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
-            }
-            return null;
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
             if (prefillEmail) {
                 initializeUser(prefillEmail);
             } else {
-                const cookieEmail = getCookie('user_email');
-                if (cookieEmail) {
-                    initializeUser(cookieEmail);
-                } else {
-                    document.getElementById('emailModal').style.display = 'flex';
-                }
+                document.getElementById('emailModal').style.display = 'flex';
             }
         });
 
@@ -178,7 +152,6 @@
                     body: JSON.stringify({email: currentAuthEmail, code: code})
                 });
                 if(res.ok) {
-                    setCookie('user_email', currentAuthEmail, 30);
                     initializeUser(currentAuthEmail);
                 } else { alert('Invalid Code'); btn.disabled = false; }
             } catch(e) { alert('Network Error'); btn.disabled = false; }
@@ -192,14 +165,15 @@
             fetchUserData(email);
         }
 
-        function resetUser() {
-            setCookie('user_email', '', -1);
+        async function resetUser() {
+            await fetch('/api/auth/logout', { method: 'POST' });
             location.reload();
         }
 
         async function fetchUserData(email) {
             try {
-                const response = await fetch(`/api/user-info?email=${email}`);
+                const response = await fetch('/api/user-info');
+                if (!response.ok) return;
                 const data = await response.json();
                 const cardsDiv = document.getElementById('savedCardsList');
                 cardsDiv.innerHTML = '';
@@ -218,15 +192,26 @@
                 if (data.operations && data.operations.length > 0) {
                     document.getElementById('historyContainer').style.display = 'block';
                     data.operations.forEach(op => {
-                        histDiv.innerHTML += `
-                            <div style="display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:8px;">
-                                <div>
-                                    <div style="font-weight:600; color:var(--text-main)">${op.reference}</div>
-                                    <div style="font-size:11px; color:var(--text-secondary)">${op.date} • ${op.card_mask}</div>
-                                </div>
-                                <div style="color:var(--accent-primary); font-weight:600;">+${op.amount} ${currencySymbol}</div>
-                            </div>
-                        `;
+                        const row = document.createElement('div');
+                        row.style.cssText = 'display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:8px;';
+
+                        const left = document.createElement('div');
+                        const refEl = document.createElement('div');
+                        refEl.style.cssText = 'font-weight:600; color:var(--text-main)';
+                        refEl.textContent = op.reference;
+                        const metaEl = document.createElement('div');
+                        metaEl.style.cssText = 'font-size:11px; color:var(--text-secondary)';
+                        metaEl.textContent = `${op.date} • ${op.card_mask}`;
+                        left.appendChild(refEl);
+                        left.appendChild(metaEl);
+
+                        const right = document.createElement('div');
+                        right.style.cssText = 'color:var(--accent-primary); font-weight:600;';
+                        right.textContent = `+${op.amount} ${currencySymbol}`;
+
+                        row.appendChild(left);
+                        row.appendChild(right);
+                        histDiv.appendChild(row);
                     });
                 }
             } catch (e) { console.error(e); }
