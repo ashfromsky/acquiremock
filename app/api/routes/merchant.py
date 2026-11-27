@@ -14,12 +14,12 @@ router = APIRouter(
 
 @router.get("/login", response_class=HTMLResponse)
 async def merchant_login(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request, "login.html", {"request": request})
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
 async def merchant_dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {
+    return templates.TemplateResponse(request, "dashboard.html", {
         "request": request,
         "currency_symbol": CURRENCY_SYMBOL
     })

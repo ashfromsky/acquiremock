@@ -82,7 +82,7 @@
 
                 <div class="form-group">
                     <label class="form-label" data-i18n="redirect_label">Redirect URL</label>
-                    <input type="url" id="redirectUrl" class="form-input" value="http://localhost:8000/success" style="font-size: 13px;">
+                    <input type="url" id="redirectUrl" class="form-input" value="http://localhost:8000" style="font-size: 13px;">
                 </div>
             </div>
 
@@ -135,11 +135,7 @@
 
             const amount = parseInt(document.getElementById('amount').value);
             const reference = document.getElementById('reference').value;
-            let redirectUrl = document.getElementById('redirectUrl').value;
-
-            if (redirectUrl.includes('localhost:8000')) {
-                redirectUrl = window.location.origin + '/success/PREVIEW';
-            }
+            const redirectUrl = document.getElementById('redirectUrl').value;
 
             try {
                 const res = await fetch('/api/create-invoice', {
@@ -149,7 +145,7 @@
                         amount: amount,
                         reference: reference,
                         webhook_url: document.getElementById('webhookUrl').value,
-                        redirect_url: document.getElementById('redirectUrl').value
+                        redirect_url: redirectUrl
                     })
                 });
 

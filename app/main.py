@@ -83,7 +83,7 @@ async def payment_error_handler(request: Request, exc: PaymentError):
 async def custom_404_handler(request: Request, exc: HTTPException):
     from fastapi.templating import Jinja2Templates
     templates = Jinja2Templates(directory="templates/pages")
-    return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+    return templates.TemplateResponse(request, "404.html", {"request": request}, status_code=404)
 
 
 app.include_router(health.router)
