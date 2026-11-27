@@ -245,7 +245,7 @@ class PaymentController extends Controller
         ksort($payload);
 
         // Create message
-        $message = json_encode($payload);
+        $message = json_encode($payload, JSON_UNESCAPED_SLASHES);
 
         // Calculate expected signature
         $expectedSignature = hash_hmac('sha256', $message, $this->webhookSecret);

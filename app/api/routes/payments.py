@@ -53,7 +53,7 @@ async def finalize_successful_payment(
 ):
     from app.models.main_models import SuccessfulOperation
     from app.functional.main_functions import send_successful_operation
-    from app.services.webhook_service import send_webhook_with_retry
+    from app.services.webhook_service import dispatch_webhook
     from app.services.smtp_service import send_receipt_email
 
     logger.info(f"Finalizing payment {payment.id}")
@@ -85,7 +85,7 @@ async def finalize_successful_payment(
         })
         logger.info(f"Receipt email task added for {payment.otp_email}")
 
-    background_tasks.add_task(send_webhook_with_retry, payment, db)
+    background_tasks.add_task(dispatch_webhook, payment.id)
 
 
 @router.post("/create-invoice", response_model=CreateInvoiceResponse)
