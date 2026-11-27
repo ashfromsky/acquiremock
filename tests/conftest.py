@@ -1,15 +1,26 @@
 ﻿import os
 from typing import AsyncGenerator
 
+import bcrypt
 import pytest
-from httpx import AsyncClient, ASGITransport
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
 
+TEST_ADMIN_USERNAME = "admin"
+TEST_ADMIN_PASSWORD = "AdminTestPassword!2026"
+TEST_ADMIN_PASSWORD_HASH = bcrypt.hashpw(
+    TEST_ADMIN_PASSWORD.encode("utf-8"),
+    bcrypt.gensalt(rounds=4),
+).decode("utf-8")
+
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["TESTING"] = "true"
-os.environ.setdefault("WEBHOOK_SECRET", "test-webhook-secret-key-at-least-32-chars")
+os.environ.setdefault("WEBHOOK_SECRET", "dev-pytest-webhook-secret-8f4c1a9e3b7d2056")
+os.environ.setdefault("SESSION_SECRET", "dev-pytest-session-secret-5a2d9c8e1f4b7039")
+os.environ.setdefault("ADMIN_USERNAME", TEST_ADMIN_USERNAME)
+os.environ.setdefault("ADMIN_PASSWORD_HASH", TEST_ADMIN_PASSWORD_HASH)
 
 import app.database.core.session as db_session_module
 from app.core.limiter import limiter
@@ -57,7 +68,7 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
-        timeout=5.0
+        timeout=5.0,
     ) as c:
         yield c
 
