@@ -1,7 +1,10 @@
-﻿from sqlmodel import SQLModel, Field
-from typing import Optional
-from datetime import datetime, timedelta
+﻿from datetime import datetime, timedelta
 from enum import Enum
+from typing import Optional
+
+from sqlmodel import Field, SQLModel
+
+from app.core.time import utcnow
 
 class PaymentStatus(str, Enum):
     PENDING = "pending"
@@ -73,4 +76,16 @@ class WebhookLog(SQLModel, table=True):
     attempt_number: int
     success: bool = Field(default=False)
     error_message: Optional[str] = Field(default=None)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=utcnow)
+
+
+class AdminSession(SQLModel, table=True):
+    __tablename__ = "admin_sessions"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    session_id: str = Field(index=True, unique=True)
+    username: str = Field(index=True)
+    csrf_token: str
+    expires_at: datetime = Field(index=True)
+    revoked_at: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(default_factory=utcnow)

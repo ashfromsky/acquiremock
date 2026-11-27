@@ -74,3 +74,17 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 
     app.dependency_overrides.clear()
     db_session_module.AsyncSessionLocal = original_session_local
+
+
+async def login_as_admin(client: AsyncClient) -> str:
+    resp = await client.post(
+        "/api/admin/login",
+        json={"username": TEST_ADMIN_USERNAME, "password": TEST_ADMIN_PASSWORD},
+    )
+    assert resp.status_code == 200, resp.text
+    return resp.json()["csrf_token"]
+
+
+@pytest.fixture(scope="function")
+async def admin_csrf(client: AsyncClient) -> str:
+    return await login_as_admin(client)

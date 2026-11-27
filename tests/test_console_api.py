@@ -6,7 +6,7 @@ from app.models.main_models import Payment, PaymentStatus, SavedCard, WebhookLog
 from app.security.crypto import create_signed_email_token, hash_sensitive_data
 
 
-async def test_console_config_and_overview(client: AsyncClient, db_session):
+async def test_console_config_and_overview(client: AsyncClient, db_session, admin_csrf: str):
     p_paid = Payment(
         id="pay-ov-1",
         amount=15000,
@@ -63,6 +63,7 @@ async def test_console_config_and_overview(client: AsyncClient, db_session):
 async def test_console_payments_filter_detail_and_webhook_retry(
     client: AsyncClient,
     db_session,
+    admin_csrf: str,
     monkeypatch,
 ):
     payment = Payment(
@@ -102,7 +103,10 @@ async def test_console_payments_filter_detail_and_webhook_retry(
         return await orig_post(self, url, *args, **kwargs)
 
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post)
-    retry = await client.post("/api/console/webhooks/pay-det-1/retry")
+    retry = await client.post(
+        "/api/console/webhooks/pay-det-1/retry",
+        headers={"X-CSRF-Token": admin_csrf},
+    )
     assert retry.status_code == 200
     retry_data = retry.json()
     assert retry_data["success"] is True

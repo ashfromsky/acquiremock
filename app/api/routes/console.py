@@ -16,7 +16,8 @@ from app.core.limiter import limiter
 from app.database.core.session import get_db
 from app.functional.main_functions import get_payment
 from app.models.errors import PaymentNotFoundError
-from app.models.main_models import Payment, PaymentStatus, WebhookLog
+from app.models.main_models import AdminSession, Payment, PaymentStatus, WebhookLog
+from app.security.admin_auth import require_admin, require_admin_csrf
 from app.services.smtp_service import EMAIL_ENABLED
 from app.services.webhook_service import send_webhook_with_retry
 
@@ -25,6 +26,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(
     prefix="/api/console",
     tags=["console"],
+    dependencies=[Depends(require_admin)],
 )
 
 
@@ -273,6 +275,7 @@ async def list_console_webhooks(
 async def retry_console_webhook(
     request: Request,
     payment_id: str,
+    _admin_session: AdminSession = Depends(require_admin_csrf),
     db: AsyncSession = Depends(get_db),
 ):
     payment = await get_payment(db, payment_id)
