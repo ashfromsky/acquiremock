@@ -79,3 +79,23 @@ class SavedCardNotFoundError(PaymentError):
             message=f"Saved card {card_id} not found",
             status_code=404
         )
+
+
+class IdempotencyConflictError(PaymentError):
+    def __init__(self, payment_id: Optional[str] = None, message: str = "Idempotency-Key conflict"):
+        super().__init__(
+            code="IDEMPOTENCY_KEY_CONFLICT",
+            message=message,
+            status_code=409,
+            payment_id=payment_id,
+        )
+
+
+class IdempotencyInProgressError(PaymentError):
+    def __init__(self, payment_id: Optional[str] = None):
+        super().__init__(
+            code="IDEMPOTENCY_REQUEST_IN_PROGRESS",
+            message="A request with this Idempotency-Key is currently being processed",
+            status_code=409,
+            payment_id=payment_id,
+        )

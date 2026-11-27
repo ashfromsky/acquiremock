@@ -27,7 +27,7 @@ class Payment(SQLModel, table=True):
     otp_email: Optional[str] = Field(default=None)
     otp_code: Optional[str] = Field(default=None)
     card_mask: Optional[str] = Field(default=None)
-    idempotency_key: Optional[str] = Field(default=None, index=True)
+    idempotency_key: Optional[str] = Field(default=None, index=True, unique=True)
     psp_transaction_id: Optional[str] = Field(default=None)
     error_code: Optional[str] = Field(default=None)
     error_message: Optional[str] = Field(default=None)
@@ -91,3 +91,19 @@ class AdminSession(SQLModel, table=True):
     expires_at: datetime = Field(index=True)
     revoked_at: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=utcnow)
+
+
+class IdempotencyRecord(SQLModel, table=True):
+    __tablename__ = "idempotency_keys"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    idempotency_key: str = Field(index=True, unique=True)
+    payment_id: str = Field(index=True)
+    request_fingerprint: str
+    status: str = Field(default="in_progress")
+    response_status: Optional[int] = Field(default=None)
+    response_location: Optional[str] = Field(default=None)
+    error_code: Optional[str] = Field(default=None)
+    error_message: Optional[str] = Field(default=None)
+    created_at: datetime = Field(default_factory=utcnow)
+    updated_at: datetime = Field(default_factory=utcnow)

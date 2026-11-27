@@ -26,7 +26,14 @@ from app.functional.main_functions import (
     create_payment,
     get_payment,
     update_payment,
-    get_payment_by_idempotency
+)
+from app.services.payments.idempotency import (
+    claim_idempotency_key,
+    complete_idempotency_key,
+    compute_payment_fingerprint,
+    normalize_idempotency_key,
+    release_idempotency_key,
+    replay_idempotency_outcome,
 )
 from app.security.sanitizer import validate_reference
 from app.security.crypto import (
@@ -143,19 +150,69 @@ async def process_payment(
         logger.warning(f"CSRF Attack attempt on payment {payment_id}")
         raise CSRFTokenMismatchError(payment_id)
 
-    if idempotency_key:
-        existing = await get_payment_by_idempotency(db, idempotency_key)
-        if existing:
-            logger.info(f"Duplicate request detected with idempotency key {idempotency_key}")
-            if existing.status == PaymentStatus.PAID:
-                return RedirectResponse(url=f"/success/{existing.id}", status_code=303)
-            elif existing.status == PaymentStatus.WAITING_FOR_OTP:
-                return RedirectResponse(url=f"/otp/{existing.id}", status_code=303)
-            elif existing.status == PaymentStatus.FAILED:
-                raise InsufficientFundsError(existing.id)
-            elif existing.status == PaymentStatus.EXPIRED:
-                raise PaymentExpiredError(existing.id)
+    claimed_key = normalize_idempotency_key(idempotency_key, payment_id)
+    if claimed_key is not None:
+        fingerprint = compute_payment_fingerprint(
+            payment_id=payment_id,
+            email=email,
+            card_number=card_number,
+            expiry=expiry,
+            saved_card_id=saved_card_id,
+            save_card=save_card,
+        )
+        existing_record = await claim_idempotency_key(
+            db,
+            claimed_key,
+            payment_id,
+            fingerprint,
+        )
+        if existing_record is not None:
+            logger.info("Replaying idempotent outcome for payment %s", payment_id)
+            return replay_idempotency_outcome(existing_record)
 
+    try:
+        return await _execute_payment_submission(
+            request=request,
+            payment_id=payment_id,
+            background_tasks=background_tasks,
+            card_number=card_number,
+            expiry=expiry,
+            cvv=cvv,
+            saved_card_id=saved_card_id,
+            email=email,
+            save_card=save_card,
+            claimed_key=claimed_key,
+            db=db,
+        )
+    except (InsufficientFundsError, PaymentExpiredError) as exc:
+        if claimed_key is not None:
+            await complete_idempotency_key(
+                db,
+                claimed_key,
+                response_status=exc.status_code,
+                error_code=exc.code,
+                error_message=exc.message,
+            )
+        raise
+    except Exception:
+        if claimed_key is not None:
+            await release_idempotency_key(db, claimed_key)
+        raise
+
+
+async def _execute_payment_submission(
+    request: Request,
+    payment_id: str,
+    background_tasks: BackgroundTasks,
+    card_number: Optional[str],
+    expiry: Optional[str],
+    cvv: Optional[str],
+    saved_card_id: Optional[str],
+    email: str,
+    save_card: Optional[str],
+    claimed_key: Optional[str],
+    db: AsyncSession,
+):
     logger.info(f"Processing payment {payment_id} for email {email}")
     payment = await get_payment(db, payment_id)
 
@@ -170,8 +227,8 @@ async def process_payment(
         await update_payment(db, payment)
         raise PaymentExpiredError(payment_id)
 
-    if idempotency_key:
-        payment.idempotency_key = idempotency_key
+    if claimed_key is not None and payment.idempotency_key is None:
+        payment.idempotency_key = claimed_key
 
     is_valid_card = False
     card_mask_display = ""
@@ -239,7 +296,15 @@ async def process_payment(
         if verified_email and hmac.compare_digest(verified_email, email):
             logger.info(f"Signed session matched for {email}, skipping OTP")
             await finalize_successful_payment(payment, db, background_tasks)
-            response = RedirectResponse(url=f"/success/{payment_id}", status_code=303)
+            target_url = f"/success/{payment_id}"
+            if claimed_key is not None:
+                await complete_idempotency_key(
+                    db,
+                    claimed_key,
+                    response_status=303,
+                    response_location=target_url,
+                )
+            response = RedirectResponse(url=target_url, status_code=303)
             response.set_cookie(
                 key="user_session",
                 value=create_signed_email_token(email),
@@ -255,6 +320,13 @@ async def process_payment(
         payment.status = "waiting_for_otp"
         await update_payment(db, payment)
 
+        if claimed_key is not None:
+            await complete_idempotency_key(
+                db,
+                claimed_key,
+                response_status=303,
+                response_location=f"/otp/{payment_id}",
+            )
         background_tasks.add_task(send_otp_email, email, otp_code)
         logger.info(f"OTP sent to {email}")
         return RedirectResponse(url=f"/otp/{payment_id}", status_code=303)
