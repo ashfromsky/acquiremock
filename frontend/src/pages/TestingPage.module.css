@@ -9,6 +9,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
+  min-width: 0;
 }
 
 .panel {
@@ -16,6 +17,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
+  min-width: 0;
 }
 
 .panelHead {
@@ -157,6 +159,10 @@
   background: var(--bg-surface);
   border: 1px solid var(--border-subtle);
   font-size: 12.5px;
+}
+
+.urlBox > span {
+  min-width: 0;
   word-break: break-all;
 }
 
@@ -251,6 +257,6 @@
 
 @media (max-width: 980px) {
   .workbench {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

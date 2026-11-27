@@ -138,6 +138,10 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+.urlValue > span {
+  min-width: 0;
   word-break: break-all;
 }
 

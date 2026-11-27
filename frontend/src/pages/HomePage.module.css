@@ -105,6 +105,7 @@
 
 .lifecycleList {
   border-top: 1px solid var(--border-subtle);
+  min-width: 0;
 }
 
 .lifecycleRow {
@@ -195,6 +196,8 @@
   background: #1B1919;
   border: 1px solid rgba(245, 241, 237, 0.10);
   border-radius: var(--radius-lg);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .codeBar {
@@ -332,7 +335,7 @@
   }
 
   .heroGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-4);
   }
 
@@ -349,7 +352,7 @@
   .lifecycleGrid,
   .contrastGrid,
   .securityGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: var(--space-8);
   }
 

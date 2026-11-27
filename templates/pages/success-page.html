@@ -63,7 +63,7 @@
                 </div>
                 <div class="summary-row">
                     <span class="summary-key" data-i18n="sum_label">Amount</span>
-                    <span class="summary-val" style="font-family: var(--font-mono);">{{ amount }} {{ currency_symbol }}</span>
+                    <span class="summary-val" style="font-family: var(--font-mono);">{{ amount | int if amount == amount | int else amount }} {{ currency_symbol }}</span>
                 </div>
                 {% if card_mask %}
                 <div class="summary-row">

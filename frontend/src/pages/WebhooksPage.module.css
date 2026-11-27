@@ -20,12 +20,16 @@
   cursor: pointer;
 }
 
-.topTab:hover {
+.topTab:hover:not(.topTabActive) {
   color: var(--text-primary);
 }
 
 .topTabActive {
   background: var(--bg-inverse);
+  color: var(--text-inverse);
+}
+
+.topTabActive:hover {
   color: var(--text-inverse);
 }
 
@@ -165,6 +169,7 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
+  min-width: 0;
 }
 
 .panelTitle {
@@ -217,6 +222,6 @@
 
 @media (max-width: 960px) {
   .verifierGrid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

@@ -11,6 +11,9 @@
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
+  flex-shrink: 0;
+  white-space: nowrap;
+  word-break: normal;
   transition:
     background-color var(--duration-fast) var(--ease-out),
     color var(--duration-fast) var(--ease-out);

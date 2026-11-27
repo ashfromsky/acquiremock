@@ -39,7 +39,7 @@ export function Button({
       {...rest}
     >
       {loading ? <span className={styles.spinner} aria-hidden="true" /> : null}
-      <span>{children}</span>
+      {children}
     </button>
   );
 }

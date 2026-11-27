@@ -33,12 +33,16 @@
     color var(--duration-fast) var(--ease-out);
 }
 
-.tab:hover {
+.tab:hover:not(.tabActive) {
   color: var(--text-primary);
 }
 
 .tabActive {
   background: var(--bg-inverse);
+  color: var(--text-inverse);
+}
+
+.tabActive:hover {
   color: var(--text-inverse);
 }
 
