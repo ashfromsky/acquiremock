@@ -1,0 +1,127 @@
+:root {
+  --bg-canvas: #F5F1ED;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #EFEAE4;
+  --bg-muted: #E6DFD7;
+  --bg-inverse: #242222;
+
+  --text-primary: #242222;
+  --text-secondary: #5C5757;
+  --text-muted: #757070;
+  --text-inverse: #F5F1ED;
+  --text-inverse-muted: #B5AFAF;
+
+  --brand-coral: #E99A98;
+  --brand-coral-soft: #F2B8B3;
+  --brand-coral-deep: #D96F70;
+  --brand-coral-ink: #B04446;
+  --brand-coral-tint: rgba(233, 154, 152, 0.14);
+
+  --border-subtle: rgba(36, 34, 34, 0.09);
+  --border-strong: rgba(36, 34, 34, 0.18);
+  --focus-ring: 0 0 0 2px var(--bg-canvas), 0 0 0 4px #D96F70;
+
+  --status-paid-bg: #E7F2EC;
+  --status-paid-text: #1B5E3A;
+  --status-pending-bg: #EFEAE4;
+  --status-pending-text: #4F4A4A;
+  --status-otp-bg: #FDF0E6;
+  --status-otp-text: #8C4716;
+  --status-failed-bg: #FBE9E8;
+  --status-failed-text: #9E2A2B;
+  --status-expired-bg: #EBE8E5;
+  --status-expired-text: #5E5959;
+
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  --shadow-sm: 0 1px 2px rgba(36, 34, 34, 0.05);
+  --shadow-md: 0 8px 24px rgba(36, 34, 34, 0.07);
+  --shadow-lg: 0 16px 40px rgba(36, 34, 34, 0.10);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
+
+  --sidebar-width: 248px;
+  --content-max: 1360px;
+  --header-height: 64px;
+}
+
+:root[data-theme="dark"],
+body.dark-mode {
+  --bg-canvas: #1B1919;
+  --bg-surface: #242222;
+  --bg-subtle: #2D2A2A;
+  --bg-muted: #363333;
+  --bg-inverse: #F5F1ED;
+
+  --text-primary: #F5F1ED;
+  --text-secondary: #B5AFAF;
+  --text-muted: #918B8B;
+  --text-inverse: #242222;
+  --text-inverse-muted: #5C5757;
+
+  --brand-coral: #E99A98;
+  --brand-coral-soft: #F2B8B3;
+  --brand-coral-deep: #D96F70;
+  --brand-coral-ink: #F2B8B3;
+  --brand-coral-tint: rgba(233, 154, 152, 0.14);
+
+  --border-subtle: rgba(245, 241, 237, 0.09);
+  --border-strong: rgba(245, 241, 237, 0.18);
+  --focus-ring: 0 0 0 2px var(--bg-canvas), 0 0 0 4px #E99A98;
+
+  --status-paid-bg: rgba(74, 173, 120, 0.16);
+  --status-paid-text: #7CD9A3;
+  --status-pending-bg: rgba(245, 241, 237, 0.09);
+  --status-pending-text: #D1CBCB;
+  --status-otp-bg: rgba(235, 165, 92, 0.16);
+  --status-otp-text: #F2BA7D;
+  --status-failed-bg: rgba(217, 111, 112, 0.18);
+  --status-failed-text: #F4A3A4;
+  --status-expired-bg: rgba(245, 241, 237, 0.07);
+  --status-expired-text: #A39D9D;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.45);
+}
+
+::selection {
+  background: var(--brand-coral-soft);
+  color: #242222;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

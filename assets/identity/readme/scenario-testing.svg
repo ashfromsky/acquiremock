@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 440" width="640" height="440" role="img" aria-label="Scenario Testing">
+  <defs>
+    <clipPath id="cap-scenario-testing-clip">
+      <rect x="0" y="0" width="640" height="440" rx="22" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#cap-scenario-testing-clip)">
+    <rect width="640" height="440" fill="#242222" />
+
+    <!-- Subtle top index tag -->
+    <text x="44.0" y="48.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="11.0" font-weight="700" fill="#E99A98" letter-spacing="1.32px">CAPABILITY  03</text>
+
+    <!-- Abstract Brand-Derived Geometric Stage (y=56..304) -->
+    
+      <!-- Subtle horizontal target guides -->
+      <line x1="320" y1="114" x2="536" y2="114" stroke="#393535" stroke-width="1" />
+      <line x1="320" y1="184" x2="536" y2="184" stroke="#393535" stroke-width="1" />
+      <line x1="320" y1="254" x2="536" y2="254" stroke="#393535" stroke-width="1" />
+
+      <!-- Single incoming transaction stroke -->
+      <path d="M 108 184 L 256 184" fill="none" stroke="#E99A98" stroke-width="16" stroke-linecap="round" />
+
+      <!-- Branch 1: Upper trajectory (Approved / Warm White) -->
+      <path d="M 256 184 C 316 184, 344 114, 412 114 L 516 114" fill="none" stroke="#F5F1ED" stroke-width="15" stroke-linecap="round" />
+
+      <!-- Branch 2: Center trajectory (Challenge / Pastel Red) -->
+      <path d="M 256 184 L 516 184" fill="none" stroke="#F2B8B3" stroke-width="15" stroke-linecap="round" />
+
+      <!-- Branch 3: Lower trajectory (Declined / Muted Red) -->
+      <path d="M 256 184 C 316 184, 344 254, 412 254 L 516 254" fill="none" stroke="#D96F70" stroke-width="15" stroke-linecap="round" />
+
+      <!-- Routing fulcrum node -->
+      <circle cx="256" cy="184" r="16" fill="#242222" stroke="#E99A98" stroke-width="5.5" />
+
+      <!-- Crisp terminal dots -->
+      <circle cx="516" cy="114" r="6" fill="#242222" />
+      <circle cx="516" cy="184" r="6" fill="#242222" />
+      <circle cx="516" cy="254" r="6" fill="#242222" />
+    
+
+    <!-- Editorial Caption Bar -->
+    <line x1="44" y1="316" x2="596" y2="316" stroke="#393535" stroke-width="1" />
+    <text x="44.0" y="358.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="24.0" font-weight="600" fill="#F5F1ED" letter-spacing="-0.36px">Scenario Testing</text>
+    <text x="44.0" y="392.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="15.0" font-weight="500" fill="#B5AFA9">Deterministic approval, decline, and challenge outcomes.</text>
+
+    <!-- Crisp 1px outer hairline -->
+    <rect x="0.5" y="0.5" width="639" height="439" rx="22" fill="none" stroke="#393535" stroke-width="1" />
+  </g>
+</svg>

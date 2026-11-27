@@ -1,512 +1,164 @@
-# AcquireMock
+<p align="center">
+  <img src="assets/identity/logo/logo_acquiremock-horizontal.png" alt="AcquireMock" />
+</p>
 
-**Mock payment gateway for testing payment integrations without real money.**
+<p align="center">
+  <strong>Self-hosted acquiring &amp; payment gateway simulator for realistic fintech testing.</strong>
+</p>
 
-Stop using real payment providers in development. AcquireMock simulates complete payment flows including OTP verification, webhooks, and card storage.
-
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-blue.svg)](https://fastapi.tiangolo.com)
-[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-
-![Demo](assets/acquiremock.gif)
+<p align="center">
+  <a href="https://github.com/ashfromsky/acquiremock/actions/workflows/tests.yml"><img src="https://img.shields.io/github/actions/workflow/status/ashfromsky/acquiremock/tests.yml?branch=development&label=CI" alt="CI Status" /></a>
+  <img src="https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white" alt="Python 3.12" />
+  <img src="https://img.shields.io/badge/FastAPI-0.122-009688?logo=fastapi&logoColor=white" alt="FastAPI" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black" alt="React 19" />
+  <img src="https://img.shields.io/badge/PostgreSQL-15-4169E1?logo=postgresql&logoColor=white" alt="PostgreSQL 15" />
+</p>
 
 ---
 
-## Quick Start
+![Section 01: About AcquireMock](assets/identity/readme/about.svg)
 
-### Option 1: Docker (Recommended)
+AcquireMock is an open-source, self-hosted payment acquiring simulator built with **FastAPI**, **SQLModel**, **Alembic**, and **React**. It lets engineering teams test full checkout flows — invoice creation, card validation, 3DS/OTP verification, idempotency, failure modes, and signed webhook delivery — without connecting to a live processor or card network.
 
-```bash
-# Clone and start
-git clone https://github.com/illusiOxd/acquiremock.git
-cd acquiremock
-docker-compose up
+### Why v2.0
+
+- **Admin-protected Developer Console**: Dedicated `/api/admin/*` cookie + CSRF authentication (`ADMIN_USERNAME`, `ADMIN_PASSWORD_HASH`, `SESSION_SECRET`) isolated from customer saved-card sessions.
+- **Hardened SSRF Protection**: Resolves all `A`/`AAAA` DNS records per delivery attempt, blocks private/loopback/metadata IPs (unless `ALLOW_LOCAL_WEBHOOKS=true` in development), pins connections to validated IPs, and rejects HTTP redirects.
+- **Exact Minor-Unit Money**: Monetary amounts are stored as `BigInteger` minor currency units (for example `25000` USD = `$250.00`) and formatted cleanly for 0-, 2-, and 3-decimal currencies.
+- **Persistent Background Worker & Alembic Migrations**: Coordinated `db` -> `migrate` (`alembic upgrade head`) -> `app` + `worker` (`python -m app.worker`) lifecycle with `10s / 20s / 40s / 80s` backoff and DB row locking.
+
+---
+
+![Section 02: Features](assets/identity/readme/features.svg)
+
+| Capability | Summary |
+| --- | --- |
+| [![Capability 01: Payment Simulation](assets/identity/readme/payment-simulation.svg)](#payment-simulation) | **Payment Simulation.** Hosted checkout (`/checkout/{payment_id}`), `EN`/`UK`/`DE`/`RU` localization, Light/Dark themes, `bcrypt` saved cards, and `Strict`/`Lax` CSRF protection. |
+| [![Capability 02: Transaction Lifecycle](assets/identity/readme/transaction-lifecycle.svg)](#transaction-lifecycle) | **Transaction Lifecycle.** Atomic SQLModel state transitions (`pending`, `waiting_for_otp`, `paid`, `failed`, `expired`), 15-minute auto-expiry, and protected live search at `/app/payments`. |
+| [![Capability 03: Scenario Testing](assets/identity/readme/scenario-testing.svg)](#scenario-testing) | **Scenario Testing.** Deterministic approval (`4444 4444 4444 4444`), `402 INSUFFICIENT_FUNDS` (`5555 5555 5555 5555`), `410 PAYMENT_EXPIRED`, `Idempotency-Key` conflict protection, and `/app/testing` playground. |
+| [![Capability 04: Webhook Delivery](assets/identity/readme/webhook-delivery.svg)](#webhook-delivery) | **Webhook Delivery.** Compact recursively sorted JSON signed with `HMAC-SHA256` (`X-Signature`), `webhook_logs` audit trail (`auto`/`manual`), 5-attempt exponential retry (`10s/20s/40s/80s`), and `/app/webhooks` console. |
+| [![Capability 05: Developer Integration](assets/identity/readme/developer-integration.svg)](#developer-integration) | **Developer Integration.** SQLite or PostgreSQL via async SQLModel + Alembic, non-root Docker images, pinned SSRF protection (`ALLOW_LOCAL_WEBHOOKS=false`), and SlowAPI rate limits. |
+
+---
+
+![Section 03: Architecture](assets/identity/readme/architecture.svg)
+
+```text
+acquiremock/
+├── alembic/                         # Database migrations (0001 initial, 0002 v2 hardening)
+├── app/
+│   ├── api/routes/                  # FastAPI routers (admin, auth, checkout, console, health, pages, payments, user)
+│   ├── core/                        # Config, currency formatting, rate limiter, UTC helpers
+│   ├── database/core/               # Async SQLModel engine & session management
+│   ├── models/                      # Database tables, request/response schemas, domain errors
+│   ├── security/                    # Admin auth, CSRF, bcrypt/HMAC crypto, SSRF pinning, CSP middleware
+│   ├── services/                    # Payment creation/processing/lifecycle/idempotency & webhook delivery/retry
+│   ├── main.py                      # FastAPI application entrypoint (`app.main:app`)
+│   └── worker.py                    # Dedicated background worker (`python -m app.worker`)
+├── assets/identity/                 # Official logos, favicons, and README SVG graphics
+├── docs/                            # Getting started, API reference, and webhook verification guides
+├── examples/                        # FastAPI, Express, and Laravel integration examples
+├── frontend/                        # React 19 + TypeScript + Vite Developer Console & Vitest suite
+└── tests/                           # Pytest suite (security, SSRF, idempotency, lifecycle, worker, Postgres)
 ```
 
-Visit `http://localhost:8000`
+---
 
-### Option 2: Manual Setup
+![Section 04: Quick Start](assets/identity/readme/quick-start.svg)
+
+### Option A: Docker Compose (Recommended)
 
 ```bash
-# Clone repository
-git clone https://github.com/illusiOxd/acquiremock.git
+git clone https://github.com/ashfromsky/acquiremock.git
 cd acquiremock
+cp .env.example .env
+```
 
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/Mac
-# or
-venv\Scripts\activate     # Windows
+Generate two distinct 32+ character secrets and an administrator bcrypt hash in `.env`:
 
-# Install dependencies
+```bash
+python3 -c "import secrets; print('WEBHOOK_SECRET=' + secrets.token_urlsafe(32)); print('SESSION_SECRET=' + secrets.token_urlsafe(32))"
+python3 -c "import bcrypt; print('ADMIN_PASSWORD_HASH=\'' + bcrypt.hashpw(b'your-strong-password', bcrypt.gensalt(12)).decode() + '\'')"
+```
+
+Start PostgreSQL, run Alembic migrations automatically, and boot `app` + `worker`:
+
+```bash
+docker compose up --build -d
+```
+
+- Developer Console: `http://localhost:8000/app/login`
+- Health Check: `http://localhost:8000/health`
+
+### Option B: Local Development
+
+```bash
+git clone https://github.com/ashfromsky/acquiremock.git
+cd acquiremock
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-
-# Copy configuration
 cp .env.example .env
 
-# Edit configuration
-nano .env
-
-# Start application
-uvicorn app.main:app --port 8000 --reload
+cd frontend && npm ci && npm run build && cd ..
+.venv/bin/alembic upgrade head
 ```
 
----
-
-## How It Works
-
-AcquireMock simulates a real payment gateway with complete payment lifecycle:
-
-**Basic Flow:**
-```bash
-# 1. Create payment
-curl -X POST http://localhost:8000/api/create-invoice \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 25000,
-    "reference": "ORDER-123",
-    "webhookUrl": "https://your-site.com/webhook"
-  }'
-
-# 2. User completes checkout (UI)
-# 3. OTP verification via email
-# 4. Webhook sent to your server
-# 5. Payment confirmed
-```
-
-**Test Card:**
-```
-Card:   4444 4444 4444 4444
-CVV:    any 3 digits
-Expiry: any future date (MM/YY)
-```
-
----
-
-## Features
-
-- **Complete Payment Flow** - From invoice creation to webhook delivery
-- **OTP Verification** - Email-based payment confirmation
-- **Webhook Delivery** - HMAC-SHA256 signed callbacks with retry logic
-- **Card Storage** - Save cards for returning customers
-- **Transaction History** - Track all operations per user
-- **Auto-Expiry** - Payments automatically expire after 15 minutes
-- **Idempotency** - Prevent duplicate payment processing
-- **Multi-Language UI** - Support for UK/EN/DE/RU with dark mode
-- **Interactive Test Page** - Built-in testing interface
-
----
-
-## Configuration
-
-### Environment Variables
-
-Create `.env` file with these settings:
-
-```env
-# Database (Required)
-DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/payment_db
-# For development: sqlite+aiosqlite:///./payment.db
-
-# Security (Required)
-WEBHOOK_SECRET=your-secret-key-min-32-chars
-BASE_URL=http://localhost:8000
-
-# Email (Optional - logs to console if not configured)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-```
-
-### Database Options
-
-**Production (PostgreSQL):**
-```env
-DATABASE_URL=postgresql+asyncpg://user:password@localhost:5432/payment_db
-```
-
-**Development (SQLite):**
-```env
-DATABASE_URL=sqlite+aiosqlite:///./payment.db
-```
-
-### Email Configuration
-
-Email is optional. If not configured, OTP codes will be logged to console for testing.
-
-For Gmail, generate an app-specific password at: https://myaccount.google.com/apppasswords
-
----
-
-## Usage Examples
-
-### Create Payment Invoice
+Run the API server and dedicated worker in separate terminals (or set `ENABLE_EMBEDDED_WORKER=true` in `.env` for single-process local development):
 
 ```bash
-curl -X POST http://localhost:8000/api/create-invoice \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 25000,
-    "reference": "ORDER-123",
-    "webhookUrl": "https://your-site.com/webhook",
-    "redirectUrl": "https://your-site.com/success"
-  }'
-```
-
-**Response:**
-```json
-{
-  "pageUrl": "http://localhost:8000/checkout/{payment_id}"
-}
-```
-
-### Handle Webhook
-
-```python
-import hmac
-import hashlib
-import json
-from fastapi import Request, HTTPException
-
-def verify_webhook(payload: dict, signature: str, secret: str) -> bool:
-    """Verify HMAC-SHA256 signature"""
-    message = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-    expected = hmac.new(
-        secret.encode(),
-        message.encode(),
-        hashlib.sha256
-    ).hexdigest()
-    return hmac.compare_digest(expected, signature)
-
-@app.post("/webhook")
-async def payment_webhook(request: Request):
-    signature = request.headers.get("X-Signature")
-    payload = await request.json()
-    
-    if not verify_webhook(payload, signature, WEBHOOK_SECRET):
-        raise HTTPException(status_code=403, detail="Invalid signature")
-    
-    # Process payment
-    if payload["status"] == "paid":
-        order = await Order.get(payment_id=payload["payment_id"])
-        order.status = "paid"
-        await order.save()
-    
-    return {"status": "ok"}
-```
-
-### Webhook Payload
-
-```json
-{
-  "payment_id": "pay_abc123",
-  "reference": "ORDER-123",
-  "amount": 25000,
-  "status": "paid",
-  "timestamp": "2024-12-20T10:30:00Z"
-}
+.venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+.venv/bin/python -m app.worker
 ```
 
 ---
 
-## Advanced Features
+![Section 05: Documentation](assets/identity/readme/documentation.svg)
 
-### Card Storage
+### Guides & Integration Examples
 
-Users can save cards for future payments:
+- [Getting Started Guide](./docs/getting-started.md) — Docker Compose, local setup, secrets, migrations, and test cards
+- [API Reference](./docs/api-reference.md) — Invoice, checkout (`/api/pay/{payment_id}`), admin auth (`/api/admin/*`), and console (`/api/console/*`) endpoints + rate limits
+- [Webhook Guide](./docs/webhook-guide.md) — Payload schema, `10s / 20s / 40s / 80s` retry backoff, SSRF protections, and recursive `X-Signature` verification in Python, Node.js, PHP, and Ruby
+- Integration Examples: [FastAPI](./examples/python/fastapi_integration.py) | [Express](./examples/nodejs/express_integration.js) | [Laravel](./examples/php/laravel_integration.php)
 
-```bash
-# Payment with card storage
-POST /api/create-invoice
-{
-  "amount": 10000,
-  "reference": "ORDER-456",
-  "email": "user@example.com",
-  "saveCard": true
-}
-```
+### Required & Key Environment Variables
 
-Saved cards are hashed using bcrypt and never stored in plain text.
-
-### Transaction History
-
-View all transactions for a user:
-
-```bash
-GET /api/transactions?email=user@example.com
-```
-
-### Interactive Testing
-
-Visit `http://localhost:8000/test` for built-in test interface with:
-- Payment creation form
-- Webhook URL testing
-- Response inspection
-- Status tracking
-
----
-
-## Security Features
-
-AcquireMock implements production-grade security practices:
-
-- **HMAC-SHA256 Signatures** - All webhooks are cryptographically signed
-- **CSRF Protection** - Token validation on all forms
-- **Bcrypt Hashing** - Secure card data storage
-- **Security Headers** - XSS protection, frame options, content-type sniffing prevention
-- **Rate Limiting** - 5 requests per minute per IP
-- **Input Sanitization** - All user input validated and sanitized
-- **Secure Cookies** - HTTPOnly, Secure, SameSite attributes
-- **No Plaintext Storage** - Card data always hashed
-
----
-
-## Architecture
-
-```
-acquiremock/
-├── main.py                          # FastAPI application entry point
-├── database/
-│   ├── models/                      # SQLModel schemas
-│   │   ├── payment.py              # Payment entity
-│   │   ├── saved_card.py           # Saved cards
-│   │   └── webhook_log.py          # Webhook delivery logs
-│   └── functional/                  # Database operations
-│       ├── payment_crud.py         # Payment CRUD
-│       ├── card_crud.py            # Card operations
-│       └── webhook_crud.py         # Webhook logging
-├── services/
-│   ├── smtp_service.py             # Email delivery
-│   ├── webhook_service.py          # Webhook HTTP calls
-│   └── background_tasks.py         # Async job processing
-├── security/
-│   ├── crypto.py                   # Hashing & HMAC
-│   └── middleware.py               # Security headers
-├── templates/                       # Jinja2 HTML templates
-│   ├── checkout.html               # Payment page
-│   ├── otp.html                    # OTP verification
-│   └── test.html                   # Test interface
-└── static/                          # CSS, JS, images
-```
-
----
-
-## Database Schema
-
-### Payments Table
-- payment_id (PK)
-- amount
-- reference
-- status (pending/paid/failed/expired)
-- email
-- webhook_url
-- created_at
-- expires_at
-
-### Saved Cards Table
-- card_id (PK)
-- email
-- card_last4
-- card_hash (bcrypt)
-- created_at
-
-### Webhook Logs Table
-- log_id (PK)
-- payment_id (FK)
-- url
-- status_code
-- response_body
-- attempt_number
-- created_at
-
----
-
-## Roadmap
-
-### Current Status (v1.0)
-- Basic payment flow with OTP verification
-- Webhook delivery with HMAC signatures
-- Card storage and transaction history
-- Multi-language UI with dark mode
-
-### Next Steps (v1.1-1.2)
-- **Multi-PSP Emulation** - Switch between Stripe, PayPal, Square response formats
-- **Custom Response Builder** - Define success/failure scenarios
-- **Advanced Webhook Testing** - Simulate delays, failures, retries with custom timing
-- **3D Secure Flow** - Mock authentication pages
-- **Refund & Chargeback Simulation** - Test full payment lifecycle
-
-### Future Vision (v2.0+)
-- **Visual Flow Builder** - Drag-and-drop payment scenario designer
-- **Plugin System** - Add custom payment methods (crypto, BNPL, etc.)
-- **API Playground** - Interactive testing without writing code
-- **Multi-Currency Support** - Test currency conversion scenarios
-- **Fraud Detection Simulator** - Test suspicious transaction handling
-- **Dashboard UI** - Visual transaction monitoring
-
----
-
-## Migration to Production
-
-When ready to use a real payment provider (Stripe, PayPal, etc.):
-
-1. **Replace Card Validation** - Switch from mock validation to PSP API calls
-2. **Implement Tokenization** - Use PSP tokens instead of card storage
-3. **Add 3D Secure** - Implement authentication flow
-4. **Add Refund Endpoint** - Handle refund requests
-5. **PCI DSS Compliance** - Remove any card data handling
-6. **Update Webhooks** - Adapt to PSP webhook format
-
-AcquireMock's structure makes this transition straightforward - most business logic remains the same.
-
----
-
-## Development
-
-### Install for Development
-
-```bash
-# Clone repository
-git clone https://github.com/illusiOxd/acquiremock.git
-cd acquiremock
-
-# Install dependencies
-pip install -r requirements.txt
-pip install -r requirements-dev.txt
-
-# Run tests
-pytest tests/ -v
-
-# Format code
-black .
-isort .
-
-# Type checking
-mypy .
-```
+| Variable | Default | Description |
+| --- | --- | --- |
+| `WEBHOOK_SECRET` | **Required** | Strong secret (>= 32 chars) for HMAC-SHA256 `X-Signature` signing |
+| `SESSION_SECRET` | **Required** | Distinct strong secret (>= 32 chars) for signed admin & customer cookies |
+| `ADMIN_USERNAME` | **Required** | Administrator login username for `/app/login` & `/api/console/*` |
+| `ADMIN_PASSWORD_HASH` | **Required** | Bcrypt password hash (`$2b$12$...`) for administrator login |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./acquiremock.db` | Async database DSN (`sqlite+aiosqlite` or `postgresql+asyncpg`) |
+| `ALLOW_LOCAL_WEBHOOKS` | `false` | Keep `false` in production; enable only for localhost webhook dev testing |
+| `ENABLE_EMBEDDED_WORKER` | `false` | Run dedicated worker (`python -m app.worker`) in production |
+| `CURRENCY_CODE` / `CURRENCY_SYMBOL` | `USD` / `$` | Currency display & decimal precision (0, 2, or 3 decimals) |
+| `PAYMENT_TTL_MINUTES` | `15` | Invoice expiration timeout in minutes |
+| `WEBHOOK_MAX_ATTEMPTS` | `5` | Maximum webhook delivery attempts (1 initial + 4 retries) |
+| `WEBHOOK_TIMEOUT_SECONDS` | `10` | Per-request outgoing webhook HTTP timeout |
 
 ### Running Tests
 
 ```bash
-# All tests
-pytest tests/ -v
+# Backend
+TESTING=true \
+DATABASE_URL=sqlite+aiosqlite:///:memory: \
+WEBHOOK_SECRET=test-webhook-secret-key-at-least-32-characters \
+SESSION_SECRET=test-session-secret-key-at-least-32-characters \
+ADMIN_USERNAME=admin \
+ADMIN_PASSWORD_HASH='$2b$12$i/bda5DB0i74vSubiIswMe6rBh9Ft4wVxieTuJbTo.PgMYHvzovC.' \
+.venv/bin/pytest -v
 
-# Specific test file
-pytest tests/test_webhooks.py -v
-
-# Coverage report
-pytest --cov=. --cov-report=html
+# Frontend
+cd frontend && npm run typecheck && npm test && npm run build
 ```
 
 ---
 
-## Docker Deployment
+![Section 06: Community & Contributing](assets/identity/readme/contributing.svg)
 
-### Development
+Contributions are welcome! Please read [CONTRIBUTING.md](./CONTRIBUTING.md) before opening a pull request.
 
-```bash
-docker-compose up
-```
-
-### Production
-
-```yaml
-version: '3.8'
-services:
-  app:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://user:password@db:5432/payment_db
-      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
-      - BASE_URL=https://your-domain.com
-    depends_on:
-      - db
-  
-  db:
-    image: postgres:15
-    environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=payment_db
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-volumes:
-  postgres_data:
-```
-
----
-
-## Requirements
-
-- **Python**: 3.11+
-- **Database**: PostgreSQL 12+ (recommended) or SQLite
-- **Docker**: Optional but recommended
-
----
-
-## Use Cases
-
-- **Development Testing** - Test payment flows without real payment providers
-- **Integration Testing** - Automated tests for payment workflows
-- **Learning** - Understand payment gateway integration patterns
-- **MVP Development** - Build prototypes without payment provider setup
-- **Educational Projects** - Demonstrate payment processing concepts
-- **QA Environment** - Isolated payment testing
-
----
-
-## Contributing
-
-Contributions welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
----
-
-## License
-
-**Apache License 2.0**
-
-This project is free and open-source software. See [LICENSE](LICENSE) for details.
-
-Key points:
-- Free to use, modify, and distribute
-- Must preserve copyright notices
-- Provides patent grant
-- No trademark rights granted
-
----
-
-## Important Disclaimer
-
-**This is a MOCK payment gateway for testing purposes only.**
-
-- Do NOT use in production with real payment data
-- Do NOT store real credit card information
-- Do NOT use for actual financial transactions
-- Do NOT use for PCI DSS compliance testing
-
-For production use, integrate with certified payment providers like Stripe, PayPal, Square, or your regional payment service provider.
-
----
-
-## Links
-
-- **GitHub**: [https://github.com/illusiOxd/acquiremock](https://github.com/illusiOxd/acquiremock)
-- **Issues**: [https://github.com/illusiOxd/acquiremock/issues](https://github.com/illusiOxd/acquiremock/issues)
-- **Discussions**: [https://github.com/illusiOxd/acquiremock/discussions](https://github.com/illusiOxd/acquiremock/discussions)
-- **Documentation**: [Wiki](https://github.com/illusiOxd/acquiremock/wiki)
-
----
-
-**Safe payment testing for serious development.**
-
-Built with FastAPI, SQLModel, and Jinja2 for developers who need reliable payment mocking.
+- [GitHub Issues](https://github.com/ashfromsky/acquiremock/issues)
+- [GitHub Discussions](https://github.com/ashfromsky/acquiremock/discussions)

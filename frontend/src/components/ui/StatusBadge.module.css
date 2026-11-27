@@ -1,0 +1,35 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+
+.paid {
+  background: var(--status-paid-bg);
+  color: var(--status-paid-text);
+}
+
+.pending {
+  background: var(--status-pending-bg);
+  color: var(--status-pending-text);
+}
+
+.otp {
+  background: var(--status-otp-bg);
+  color: var(--status-otp-text);
+}
+
+.failed {
+  background: var(--status-failed-bg);
+  color: var(--status-failed-text);
+}
+
+.expired {
+  background: var(--status-expired-bg);
+  color: var(--status-expired-text);
+}

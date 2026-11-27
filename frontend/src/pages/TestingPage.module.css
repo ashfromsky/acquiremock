@@ -1,0 +1,262 @@
+.workbench {
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.rightCol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  min-width: 0;
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.panelTitle {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.presets {
+  margin-top: var(--space-2);
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.presetBtn {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.presetBtn:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.errorAlert {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--status-failed-bg);
+  color: var(--status-failed-text);
+  font-size: 13px;
+}
+
+.inspectorHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.tab {
+  min-height: 30px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.tabActive {
+  background: var(--bg-subtle);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.codeBox {
+  margin: 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: #242222;
+  color: #F5F1ED;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.55;
+  overflow-x: auto;
+}
+
+.placeholderHint {
+  margin-top: var(--space-4);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.resultBox {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.resultTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.resultStatus {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--status-paid-text);
+}
+
+.resultTime {
+  color: var(--text-muted);
+}
+
+.urlBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  font-size: 12.5px;
+}
+
+.urlBox > span {
+  min-width: 0;
+  word-break: break-all;
+}
+
+.resultActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.cardRefRow {
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.cardRefLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.cardRefNum {
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.cardRefNote {
+  margin-top: var(--space-3);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.historyPanel {
+  margin-top: var(--space-6);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.historyList {
+  margin-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.historyRow {
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.historyRow:last-child {
+  border-bottom: none;
+}
+
+.historyMeta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.historyRef {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.historyAmount,
+.historyTime {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.historyActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+@media (max-width: 980px) {
+  .workbench {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

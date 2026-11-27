@@ -1,72 +1,86 @@
 ﻿# Contributing to AcquireMock
 
-Thank you for your interest in contributing to AcquireMock! We welcome contributions from the community.
-
-## How to Contribute
-
-### Reporting Bugs
-
-If you find a bug, please create an issue with:
-- A clear title and description
-- Steps to reproduce the issue
-- Expected vs actual behavior
-- Your environment (OS, Python version, etc.)
-
-### Suggesting Features
-
-Feature suggestions are welcome! Please create an issue with:
-- A clear description of the feature
-- Why it would be useful
-- Any implementation ideas you have
-
-### Pull Requests
-
-1. Fork the repository
-2. Create a new branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Write or update tests as needed
-5. Ensure all tests pass (`pytest tests/`)
-6. Commit your changes (`git commit -m 'Add amazing feature'`)
-7. Push to your branch (`git push origin feature/amazing-feature`)
-8. Open a Pull Request
-
-### Code Style
-
-- Follow PEP 8 guidelines
-- Use type hints where appropriate
-- Add docstrings to functions and classes
-- Keep functions focused and concise
-
-### Testing
-
-- Write tests for new features
-- Ensure existing tests pass
-- Aim for good test coverage
+Thank you for contributing to AcquireMock.
 
 ## Development Setup
 
+1. Clone the repository:
+
 ```bash
-# Clone your fork
-git clone https://github.com/illusiOxd/acquiremock.git
+git clone https://github.com/ashfromsky/acquiremock.git
 cd acquiremock
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run tests
-pytest tests/
 ```
 
-## Code of Conduct
+2. Create a Python virtual environment, install dependencies, and copy `.env.example`:
 
-Be respectful and constructive in all interactions. We're all here to learn and build something useful together.
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+pip install pytest pytest-asyncio httpx aiosqlite ruff
+cp .env.example .env
+```
 
-## Questions?
+3. Apply database migrations with Alembic:
 
-Feel free to open an issue with your question or reach out to the maintainers.
+```bash
+.venv/bin/alembic upgrade head
+```
 
-Thank you for contributing! 🎉
+4. Install and build the frontend:
+
+```bash
+cd frontend
+npm ci
+npm run build
+cd ..
+```
+
+5. Start the API server and dedicated background worker:
+
+```bash
+.venv/bin/uvicorn app.main:app --reload
+```
+
+In a second terminal (or set `ENABLE_EMBEDDED_WORKER=true` for single-process local dev):
+
+```bash
+.venv/bin/python -m app.worker
+```
+
+## Running Tests
+
+### Backend
+
+```bash
+TESTING=true \
+DATABASE_URL=sqlite+aiosqlite:///:memory: \
+WEBHOOK_SECRET=test-webhook-secret-key-at-least-32-characters \
+SESSION_SECRET=test-session-secret-key-at-least-32-characters \
+ADMIN_USERNAME=admin \
+ADMIN_PASSWORD_HASH='$2b$12$i/bda5DB0i74vSubiIswMe6rBh9Ft4wVxieTuJbTo.PgMYHvzovC.' \
+.venv/bin/pytest -v
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm run typecheck
+npm test
+npm run build
+```
+
+## Coding Standards
+
+- Preserve existing module boundaries (`app/api/routes/`, `app/services/`, `app/security/`, `app/models/`).
+- Keep all monetary amounts in integer minor units (never use floats for currency values).
+- Never store secrets in code or commit `.env` files.
+- Add or update regression tests for every bug fix and security change.
+- Update relevant files in `docs/` when API contracts or configuration change.
+
+## Pull Request Process
+
+1. Create a feature or fix branch (`feat/...` or `fix/...`).
+2. Verify Alembic migrations (`alembic upgrade head`), backend `pytest`, and frontend `typecheck`, `test`, and `build` all pass.
+3. Open a pull request against the target branch with a clear description of the changes and verification results.

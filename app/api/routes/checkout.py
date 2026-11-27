@@ -1,16 +1,17 @@
-﻿import logging
-from fastapi import APIRouter, Request, Depends
+﻿from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import datetime
-from app.functional.main_functions import get_user_data
 
+from app.core.config import COOKIE_SECURE, CURRENCY_CODE, CURRENCY_SYMBOL
+from app.core.currency import format_minor_amount
 from app.database.core.session import get_db
-from app.functional.main_functions import get_payment, update_payment
-from app.models.errors import PaymentNotFoundError, PaymentAlreadyProcessedError, PaymentExpiredError
+from app.functional.main_functions import get_payment, get_user_data
+from app.models.errors import PaymentAlreadyProcessedError, PaymentExpiredError, PaymentNotFoundError
 from app.security.crypto import generate_csrf_token, verify_signed_email_token
-from app.core.config import COOKIE_SECURE, CURRENCY_SYMBOL
+from app.services.payments.lifecycle import expire_payment_if_needed
+
+import logging
 
 logger = logging.getLogger(__name__)
 templates = Jinja2Templates(directory="templates/pages")
@@ -30,9 +31,7 @@ async def checkout(payment_id: str, request: Request, db: AsyncSession = Depends
     if payment.status in ["paid", "expired", "failed"]:
         raise PaymentAlreadyProcessedError(payment_id)
 
-    if payment.expires_at < datetime.utcnow():
-        payment.status = "expired"
-        await update_payment(db, payment)
+    if await expire_payment_if_needed(db, payment):
         raise PaymentExpiredError(payment_id)
 
     user_email = verify_signed_email_token(request.cookies.get("user_session"))
@@ -46,6 +45,7 @@ async def checkout(payment_id: str, request: Request, db: AsyncSession = Depends
         "request": request,
         "payment_id": payment_id,
         "amount": payment.amount,
+        "formatted_amount": format_minor_amount(payment.amount, CURRENCY_CODE, CURRENCY_SYMBOL),
         "reference": payment.reference,
         "recent_operations": recent_operations,
         "saved_cards": saved_cards,

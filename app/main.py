@@ -8,15 +8,17 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy import text
 
+import app.core.config as config
 from app.database.core.session import engine
-from app.functional.main_functions import init_db
 from app.services.background_tasks import start_background_tasks
 from app.models.errors import PaymentError
 from app.core.limiter import limiter
 from app.security.middleware import SecurityHeadersMiddleware
 
 from app.api.routes import (
+    admin,
     auth,
     payments,
     pages,
@@ -25,7 +27,8 @@ from app.api.routes import (
     health,
     default_routers,
     merchant,
-    checkout
+    checkout,
+    console
 )
 
 logging.basicConfig(
@@ -39,18 +42,28 @@ TESTING = os.getenv("TESTING", "false").lower() == "true"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting up application and initializing database...")
-    await init_db(engine)
-    logger.info("Database initialized successfully.")
+    logger.info("Verifying database connectivity...")
+    async with engine.connect() as conn:
+        await conn.execute(text("SELECT 1"))
+    logger.info("Database connection verified.")
 
-    if not TESTING:
-        asyncio.create_task(start_background_tasks())
-        logger.info("Background tasks started")
+    stop_event = asyncio.Event()
+    worker_task = None
+    if not TESTING and config.ENABLE_EMBEDDED_WORKER:
+        worker_task = asyncio.create_task(start_background_tasks(stop_event))
+        logger.info("Embedded background worker started")
     else:
-        logger.info("Skipping background tasks (testing mode)")
+        logger.info("Embedded background worker disabled (use python -m app.worker)")
 
-    yield
-    logger.info("Shutting down application...")
+    try:
+        yield
+    finally:
+        if worker_task is not None:
+            stop_event.set()
+            worker_task.cancel()
+            await asyncio.gather(worker_task, return_exceptions=True)
+        await engine.dispose()
+        logger.info("Shutting down application...")
 
 
 app = FastAPI(
@@ -65,6 +78,9 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+SPA_ASSETS_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend", "dist", "assets"))
+if os.path.isdir(SPA_ASSETS_DIR):
+    app.mount("/assets", StaticFiles(directory=SPA_ASSETS_DIR), name="spa-assets")
 
 
 @app.exception_handler(PaymentError)
@@ -88,6 +104,7 @@ async def custom_404_handler(request: Request, exc: HTTPException):
 
 app.include_router(health.router)
 app.include_router(default_routers.router)
+app.include_router(admin.router)
 app.include_router(auth.router)
 app.include_router(payments.router)
 app.include_router(pages.router)
@@ -95,6 +112,7 @@ app.include_router(webhooks.router)
 app.include_router(user.router)
 app.include_router(merchant.router)
 app.include_router(checkout.router)
+app.include_router(console.router)
 
 if __name__ == "__main__":
     import uvicorn

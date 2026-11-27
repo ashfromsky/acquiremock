@@ -1,8 +1,10 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 
 import pytest
 from httpx import AsyncClient
 from sqlmodel import select
+
+from app.core.time import utcnow
 
 from app.functional.main_functions import get_payment
 from app.models.main_models import Payment, PaymentStatus, SavedCard, SuccessfulOperation
@@ -23,7 +25,6 @@ def mock_outbound_calls(monkeypatch):
     monkeypatch.setattr("app.services.webhook_service.dispatch_webhook", fake_dispatch_webhook)
     monkeypatch.setattr("app.services.smtp_service.send_otp_email", fake_send_otp)
     monkeypatch.setattr("app.services.smtp_service.send_receipt_email", fake_send_receipt)
-    monkeypatch.setattr("app.api.routes.payments.send_otp_email", fake_send_otp)
     monkeypatch.setattr("app.api.routes.pages.send_otp_email", fake_send_otp)
 
 
@@ -129,7 +130,7 @@ async def test_expired_payment_rejected_across_endpoints(client: AsyncClient, db
         webhook_url="https://example.com/hook",
         redirect_url="https://example.com/done",
         status=PaymentStatus.PENDING,
-        expires_at=datetime.utcnow() - timedelta(minutes=1),
+        expires_at=utcnow() - timedelta(minutes=1),
     )
     db_session.add(payment)
     await db_session.commit()
@@ -146,7 +147,7 @@ async def test_expired_payment_rejected_across_endpoints(client: AsyncClient, db
         status=PaymentStatus.WAITING_FOR_OTP,
         otp_code="1234",
         otp_email="exp@example.com",
-        expires_at=datetime.utcnow() - timedelta(minutes=1),
+        expires_at=utcnow() - timedelta(minutes=1),
     )
     db_session.add(payment_2)
     await db_session.commit()

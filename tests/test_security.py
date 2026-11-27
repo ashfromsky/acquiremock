@@ -1,9 +1,10 @@
 import pytest
 from httpx import AsyncClient
+from sqlmodel import select
 
-from app.api.routes import auth as auth_routes
-from app.models.main_models import Payment, SavedCard
+from app.models.main_models import AuthChallenge, Payment, SavedCard
 from app.security.crypto import create_signed_email_token, hash_sensitive_data
+from tests.conftest import login_as_admin
 
 
 async def test_user_info_requires_signed_session(client: AsyncClient):
@@ -21,14 +22,32 @@ async def test_user_info_requires_signed_session(client: AsyncClient):
     assert allowed.json() == {"operations": [], "cards": []}
 
 
-async def test_auth_code_sets_cookie_and_locks_after_attempts(client: AsyncClient):
-    auth_routes.login_store.clear()
+async def test_auth_code_sets_cookie_and_locks_after_attempts(
+    client: AsyncClient,
+    db_session,
+    monkeypatch,
+):
+    sent_codes: list[str] = []
+
+    async def fake_send_otp(email: str, code: str):
+        sent_codes.append(code)
+
+    monkeypatch.setattr("app.api.routes.auth.send_otp_email", fake_send_otp)
 
     send_resp = await client.post("/api/auth/send-code", json={"email": "user@example.com"})
     assert send_resp.status_code == 200
-    code = auth_routes.login_store["user@example.com"]["code"]
+    assert len(sent_codes) == 1
+    code = sent_codes[-1]
 
-    for attempt in range(4):
+    challenge = (
+        await db_session.execute(
+            select(AuthChallenge).where(AuthChallenge.email == "user@example.com")
+        )
+    ).scalars().first()
+    assert challenge is not None
+    assert challenge.code_hash != code
+
+    for _attempt in range(4):
         bad = await client.post(
             "/api/auth/verify-code",
             json={"email": "user@example.com", "code": "0000" if code != "0000" else "9999"},
@@ -40,10 +59,17 @@ async def test_auth_code_sets_cookie_and_locks_after_attempts(client: AsyncClien
         json={"email": "user@example.com", "code": "0000" if code != "0000" else "9999"},
     )
     assert locked.status_code == 429
-    assert "user@example.com" not in auth_routes.login_store
+
+    db_session.expire_all()
+    remaining = (
+        await db_session.execute(
+            select(AuthChallenge).where(AuthChallenge.email == "user@example.com")
+        )
+    ).scalars().first()
+    assert remaining is None
 
     await client.post("/api/auth/send-code", json={"email": "user@example.com"})
-    fresh_code = auth_routes.login_store["user@example.com"]["code"]
+    fresh_code = sent_codes[-1]
     ok = await client.post(
         "/api/auth/verify-code",
         json={"email": "user@example.com", "code": fresh_code},
@@ -150,3 +176,42 @@ async def test_invoice_url_validation_rejects_unsafe_urls(
         },
     )
     assert resp.status_code == 422
+
+
+async def test_security_headers_on_public_checkout_and_admin_routes(client: AsyncClient, db_session):
+    payment = Payment(
+        id="pay-hdr-1",
+        amount=1000,
+        reference="ORD-HDR",
+        webhook_url="https://example.com/hook",
+        redirect_url="https://example.com/ok",
+        status="pending",
+    )
+    db_session.add(payment)
+    await db_session.commit()
+
+    await login_as_admin(client)
+
+    for path in ["/", "/checkout/pay-hdr-1", "/api/console/config"]:
+        resp = await client.get(path)
+        assert resp.status_code == 200
+        assert "x-xss-protection" not in resp.headers
+        assert resp.headers["x-content-type-options"] == "nosniff"
+        assert resp.headers["x-frame-options"] == "DENY"
+        assert resp.headers["referrer-policy"] == "strict-origin-when-cross-origin"
+        assert "camera=()" in resp.headers["permissions-policy"]
+        csp = resp.headers["content-security-policy"]
+        assert "frame-ancestors 'none'" in csp
+        assert "https://fonts.googleapis.com" in csp
+        assert "strict-transport-security" not in resp.headers
+
+    https_resp = await client.get("/", headers={"X-Forwarded-Proto": "https"})
+    assert https_resp.status_code == 200
+    assert (
+        https_resp.headers["strict-transport-security"]
+        == "max-age=31536000; includeSubDomains"
+    )
+
+    docs_resp = await client.get("/docs")
+    assert docs_resp.status_code == 200
+    assert "https://cdn.jsdelivr.net" in docs_resp.headers["content-security-policy"]

@@ -16,6 +16,7 @@ from app.core.limiter import limiter
 from app.security.middleware import SecurityHeadersMiddleware
 
 from app.api.routes import (
+    admin,
     auth,
     payments,
     pages,
@@ -24,7 +25,8 @@ from app.api.routes import (
     health,
     default_routers,
     merchant,
-    checkout
+    checkout,
+    console
 )
 
 logging.basicConfig(
@@ -47,6 +49,10 @@ static_dir = os.path.join(BASE_DIR, "static")
 
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+spa_assets_dir = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend", "dist", "assets"))
+if os.path.isdir(spa_assets_dir):
+    app.mount("/assets", StaticFiles(directory=spa_assets_dir), name="spa-assets")
 
 
 @app.exception_handler(PaymentError)
@@ -75,6 +81,7 @@ async def custom_404_handler(request: Request, exc: HTTPException):
 
 app.include_router(health.router)
 app.include_router(default_routers.router)
+app.include_router(admin.router)
 app.include_router(auth.router)
 app.include_router(payments.router)
 app.include_router(pages.router)
@@ -82,5 +89,6 @@ app.include_router(webhooks.router)
 app.include_router(user.router)
 app.include_router(merchant.router)
 app.include_router(checkout.router)
+app.include_router(console.router)
 
 logger.info("Test application initialized (no background tasks)")

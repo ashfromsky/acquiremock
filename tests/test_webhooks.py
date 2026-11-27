@@ -1,3 +1,5 @@
+import socket
+
 import httpx
 import pytest
 from httpx import AsyncClient
@@ -69,12 +71,16 @@ async def test_dispatch_webhook_success_and_failure(
 
     captured = {}
 
+    async def fake_getaddrinfo(self, host, port, *args, **kwargs):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port))]
+
     async def fake_post_success(self, url, content=None, headers=None, **kwargs):
         captured["url"] = url
         captured["content"] = content
         captured["headers"] = headers
         return httpx.Response(200, text="ok")
 
+    monkeypatch.setattr("asyncio.base_events.BaseEventLoop.getaddrinfo", fake_getaddrinfo)
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post_success)
     ok = await dispatch_webhook("pay-wh-1")
     assert ok is True
@@ -98,10 +104,27 @@ async def test_dispatch_webhook_success_and_failure(
         return httpx.Response(500, text="server error")
 
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post_fail)
-    ok2 = await dispatch_webhook("pay-wh-1")
+    ok_skip = await dispatch_webhook("pay-wh-1")
+    assert ok_skip is True
+    db_session.expire_all()
+    still_one = await get_payment(db_session, "pay-wh-1")
+    assert still_one.webhook_attempts == 1
+
+    payment_fail = Payment(
+        id="pay-wh-2",
+        amount=3000,
+        reference="ORD-WH-2",
+        webhook_url="https://merchant.example.com/webhook",
+        redirect_url="https://merchant.example.com/ok",
+        status="paid",
+        card_mask="**** 4444",
+    )
+    await create_payment(db_session, payment_fail)
+
+    ok2 = await dispatch_webhook("pay-wh-2")
     assert ok2 is False
 
     db_session.expire_all()
-    updated2 = await get_payment(db_session, "pay-wh-1")
+    updated2 = await get_payment(db_session, "pay-wh-2")
     assert updated2.webhook_status == "failed"
-    assert updated2.webhook_attempts == 2
+    assert updated2.webhook_attempts == 1

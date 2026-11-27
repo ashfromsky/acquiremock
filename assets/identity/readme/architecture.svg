@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 220" width="1400" height="220" role="img" aria-label="ARCHITECTURE">
+  <defs>
+    <clipPath id="sec-architecture-clip">
+      <rect x="0" y="0" width="1400" height="220" rx="18" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#sec-architecture-clip)">
+    <rect width="1400" height="220" fill="#242222" />
+
+    <!-- Distinct Logo-Derived Architectural Motif (Right Zone) -->
+    
+      <line x1="936" y1="0" x2="936" y2="220" stroke="#393535" stroke-width="1" />
+      <line x1="936" y1="110" x2="1400" y2="110" stroke="#393535" stroke-width="1" />
+      <circle cx="1186" cy="110" r="146" fill="none" stroke="#393535" stroke-width="1.2" />
+      <circle cx="1186" cy="110" r="196" fill="none" stroke="#393535" stroke-width="1" stroke-dasharray="5 8" />
+      <g transform="translate(1186.00 118.00) scale(2.3500) translate(-64 -64)"><path d="M 21.5 102.5 C 26.5 58.5 38.5 21.5 58.5 21.5 C 80.5 21.5 106.5 45.5 106.5 73.5 C 106.5 94.5 95.5 106.5 78.5 106.5 C 63.5 106.5 57.5 93.5 57.5 73.5" fill="none" stroke="#E99A98" stroke-width="14.50" stroke-linecap="round" stroke-linejoin="round" /></g>
+      <circle cx="1086.1" cy="208.5" r="6" fill="#242222" stroke="#F5F1ED" stroke-width="2.5" />
+      <circle cx="1173.1" cy="18.1" r="6" fill="#F5F1ED" />
+      <circle cx="1285.9" cy="140.3" r="6" fill="#242222" stroke="#F2B8B3" stroke-width="2.5" />
+    
+
+    <!-- Left Editorial Anchor -->
+    <rect x="56" y="54" width="32" height="3.5" rx="1.75" fill="#E99A98" />
+    <text x="100.0" y="60.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="12.0" font-weight="700" fill="#E99A98" letter-spacing="1.44px">SECTION 03</text>
+    <text x="56.0" y="122.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="34.0" font-weight="700" fill="#F5F1ED" letter-spacing="2.04px">ARCHITECTURE</text>
+    <text x="56.0" y="166.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="16.0" font-weight="500" fill="#B5AFA9" letter-spacing="0.08px">Modular simulation core separating invoice state, verification, and dispatch.</text>
+
+    <!-- Crisp 1px outer frame for GitHub Light & Dark compatibility -->
+    <rect x="0.5" y="0.5" width="1399" height="219" rx="18" fill="none" stroke="#393535" stroke-width="1" />
+  </g>
+</svg>

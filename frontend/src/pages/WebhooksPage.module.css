@@ -1,0 +1,227 @@
+.topTabs {
+  display: inline-flex;
+  gap: var(--space-1);
+  padding: 3px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-6);
+}
+
+.topTab {
+  min-height: 34px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.topTab:hover:not(.topTabActive) {
+  color: var(--text-primary);
+}
+
+.topTabActive {
+  background: var(--bg-inverse);
+  color: var(--text-inverse);
+}
+
+.topTabActive:hover {
+  color: var(--text-inverse);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.filterGroup {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  min-height: 34px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.filterActive {
+  border-color: var(--brand-coral-deep);
+  background: var(--brand-coral-tint);
+  color: var(--text-primary);
+}
+
+.logList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.logCard {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4) var(--space-5);
+}
+
+.logSummary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.logMeta,
+.logActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.paymentLink {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-coral-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.attemptBadge,
+.httpStatus,
+.logDate {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.targetUrl {
+  margin-top: var(--space-2);
+  font-size: 12.5px;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+
+.inspector {
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.inspectorSection {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inspectorHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.pre {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.verifierGrid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.verifierPanel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  min-width: 0;
+}
+
+.panelTitle {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.panelDesc {
+  margin-top: 6px;
+  font-size: 13.5px;
+  color: var(--text-secondary);
+}
+
+.verifyForm {
+  margin-top: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.verifyError,
+.verifyFail {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--status-failed-bg);
+  color: var(--status-failed-text);
+  font-size: 13px;
+}
+
+.verifyPass {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--status-paid-bg);
+  color: var(--status-paid-text);
+  font-size: 13px;
+}
+
+.darkCode {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: #242222;
+  color: #F5F1ED;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+@media (max-width: 960px) {
+  .verifierGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

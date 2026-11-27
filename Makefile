@@ -1,195 +1,109 @@
-﻿.PHONY: help setup install test run docker-up docker-down docker-logs clean lint format db-reset
+﻿.PHONY: help setup install install-dev run worker run-prod migrate frontend-install frontend-dev frontend-test frontend-typecheck frontend-build docker-build docker-up docker-down docker-logs test test-cov lint format type-check db-reset clean env health quick-start
 
-# Default target
-.DEFAULT_GOAL := help
+VENV := .venv
+PYTHON := $(VENV)/bin/python
+PIP := $(VENV)/bin/pip
+PYTEST := $(VENV)/bin/pytest
+ALEMBIC := $(VENV)/bin/alembic
+UVICORN := $(VENV)/bin/uvicorn
+GUNICORN := $(VENV)/bin/gunicorn
 
-# Colors for terminal output
-CYAN := \033[0;36m
-GREEN := \033[0;32m
-YELLOW := \033[0;33m
-RED := \033[0;31m
-NC := \033[0m # No Color
+help:
+	@echo "AcquireMock v2.0 - Available commands:"
+	@echo "  make setup             - Create virtualenv, install backend & frontend deps"
+	@echo "  make migrate           - Apply Alembic database migrations"
+	@echo "  make run               - Start FastAPI dev server with reload"
+	@echo "  make worker            - Start dedicated background webhook/expiry worker"
+	@echo "  make run-prod          - Start production Gunicorn server"
+	@echo "  make frontend-dev      - Start Vite dev server"
+	@echo "  make frontend-test     - Run Vitest suite"
+	@echo "  make frontend-build    - Build frontend assets into frontend/dist"
+	@echo "  make test              - Run backend pytest and frontend Vitest suites"
+	@echo "  make docker-up         - Build and start DB, migrations, app, and worker"
 
-help: ## Show this help message
-	@echo "$(CYAN)AcquireMock - Available Commands$(NC)"
-	@echo ""
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-15s$(NC) %s\n", $$1, $$2}'
-	@echo ""
+setup: install frontend-install env
 
-# Setup & Installation
-setup: ## Initial setup (create venv and install dependencies)
-	@echo "$(CYAN)Creating virtual environment...$(NC)"
-	python3 -m venv venv
-	@echo "$(GREEN)✓ Virtual environment created$(NC)"
-	@echo "$(YELLOW)Activate it with: source venv/bin/activate$(NC)"
-	@echo "$(YELLOW)Then run: make install$(NC)"
+install:
+	python3 -m venv $(VENV)
+	$(PIP) install --upgrade pip
+	$(PIP) install -r requirements.txt
 
-install: ## Install dependencies
-	@echo "$(CYAN)Installing dependencies...$(NC)"
-	pip install --upgrade pip
-	pip install -r requirements.txt
-	@echo "$(GREEN)✓ Dependencies installed$(NC)"
+install-dev: install
+	$(PIP) install pytest pytest-asyncio httpx aiosqlite ruff
 
-install-dev: ## Install development dependencies
-	@echo "$(CYAN)Installing dev dependencies...$(NC)"
-	pip install -r requirements.txt
-	pip install pytest pytest-asyncio pytest-cov black flake8 mypy
-	@echo "$(GREEN)✓ Dev dependencies installed$(NC)"
+env:
+	@test -f .env || cp .env.example .env
 
-# Running the application
-run: ## Run the application locally
-	@echo "$(CYAN)Starting AcquireMock...$(NC)"
-	uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+migrate:
+	$(ALEMBIC) upgrade head
 
-run-prod: ## Run in production mode (no reload)
-	@echo "$(CYAN)Starting AcquireMock (production)...$(NC)"
-	gunicorn app.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+run:
+	$(UVICORN) app.main:app --reload --host 0.0.0.0 --port $${PORT:-8000}
 
-# Docker commands
-docker-up: ## Start with Docker Compose
-	@echo "$(CYAN)Starting Docker containers...$(NC)"
-	docker-compose up -d
-	@echo "$(GREEN)✓ Containers started$(NC)"
-	@echo "$(YELLOW)Access at: http://localhost:8000$(NC)"
-	@echo "$(YELLOW)View logs: make docker-logs$(NC)"
+worker:
+	$(PYTHON) -m app.worker
 
-docker-down: ## Stop Docker containers
-	@echo "$(CYAN)Stopping Docker containers...$(NC)"
-	docker-compose down
-	@echo "$(GREEN)✓ Containers stopped$(NC)"
+run-prod:
+	$(GUNICORN) app.main:app --workers $${WORKERS:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:$${PORT:-8000}
 
-docker-logs: ## View Docker logs
-	docker-compose logs -f
+frontend-install:
+	cd frontend && npm ci
 
-docker-rebuild: ## Rebuild and restart Docker containers
-	@echo "$(CYAN)Rebuilding Docker containers...$(NC)"
-	docker-compose down
-	docker-compose build --no-cache
-	docker-compose up -d
-	@echo "$(GREEN)✓ Containers rebuilt and started$(NC)"
+frontend-dev:
+	cd frontend && npm run dev
 
-docker-clean: ## Remove Docker containers and volumes
-	@echo "$(CYAN)Cleaning up Docker...$(NC)"
-	docker-compose down -v
-	@echo "$(GREEN)✓ Docker cleanup complete$(NC)"
+frontend-test:
+	cd frontend && npm test
 
-# Testing
-test: ## Run tests
-	@echo "$(CYAN)Running tests...$(NC)"
-	pytest tests/ -v
+frontend-typecheck:
+	cd frontend && npm run typecheck
 
-test-cov: ## Run tests with coverage
-	@echo "$(CYAN)Running tests with coverage...$(NC)"
-	pytest tests/ -v --cov=. --cov-report=html --cov-report=term
+frontend-build:
+	cd frontend && npm run build
 
-test-integration: ## Run integration tests (requires running server)
-	@echo "$(CYAN)Running integration tests...$(NC)"
-	python scripts/manual_payment_test.py
+docker-build:
+	docker compose build
 
-# Code Quality
-lint: ## Run linters (flake8)
-	@echo "$(CYAN)Running linter...$(NC)"
-	flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-	flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+docker-up:
+	docker compose up -d
 
-format: ## Format code with black
-	@echo "$(CYAN)Formatting code...$(NC)"
-	black .
-	@echo "$(GREEN)✓ Code formatted$(NC)"
+docker-down:
+	docker compose down
 
-format-check: ## Check if code is formatted
-	@echo "$(CYAN)Checking code formatting...$(NC)"
-	black --check .
+docker-logs:
+	docker compose logs -f
 
-type-check: ## Run type checker (mypy)
-	@echo "$(CYAN)Running type checker...$(NC)"
-	mypy . --ignore-missing-imports
+test:
+	TESTING=true \
+	DATABASE_URL=sqlite+aiosqlite:///:memory: \
+	WEBHOOK_SECRET=test-webhook-secret-key-at-least-32-characters \
+	SESSION_SECRET=test-session-secret-key-at-least-32-characters \
+	ADMIN_USERNAME=admin \
+	ADMIN_PASSWORD_HASH='$$2b$$12$$i/bda5DB0i74vSubiIswMe6rBh9Ft4wVxieTuJbTo.PgMYHvzovC.' \
+	$(PYTEST) -v
+	cd frontend && npm test
 
-# Database
-db-reset: ## Reset database (WARNING: deletes all data)
-	@echo "$(RED)⚠️  WARNING: This will delete all data!$(NC)"
-	@read -p "Are you sure? [y/N] " -n 1 -r; \
-	echo; \
-	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
-		rm -f *.db *.sqlite *.sqlite3; \
-		echo "$(GREEN)✓ Database reset$(NC)"; \
-	else \
-		echo "$(YELLOW)Database reset cancelled$(NC)"; \
-	fi
+test-cov:
+	$(PYTEST) --cov=app --cov-report=term-missing
 
-# Cleanup
-clean: ## Clean temporary files
-	@echo "$(CYAN)Cleaning temporary files...$(NC)"
+lint:
+	$(VENV)/bin/ruff check app tests
+
+format:
+	$(VENV)/bin/ruff format app tests
+
+type-check:
+	cd frontend && npm run typecheck
+
+db-reset:
+	rm -f acquiremock.db
+	$(ALEMBIC) upgrade head
+
+clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.pyo" -delete
-	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name "htmlcov" -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name ".coverage" -delete
-	@echo "$(GREEN)✓ Cleanup complete$(NC)"
+	rm -rf .pytest_cache htmlcov .coverage
 
-clean-all: clean docker-clean ## Clean everything including Docker
+health:
+	curl -sf http://localhost:$${PORT:-8000}/health
 
-# Environment
-env: ## Copy .env.example to .env
-	@if [ -f .env ]; then \
-		echo "$(YELLOW)⚠️  .env already exists$(NC)"; \
-	else \
-		cp .env.example .env; \
-		echo "$(GREEN)✓ .env created from .env.example$(NC)"; \
-		echo "$(YELLOW)⚠️  Edit .env and set your configuration$(NC)"; \
-	fi
-
-# Health check
-health: ## Check if the service is healthy
-	@echo "$(CYAN)Checking service health...$(NC)"
-	@curl -s http://localhost:8000/health | python -m json.tool || echo "$(RED)✗ Service is not running$(NC)"
-
-# Documentation
-docs: ## Open documentation
-	@echo "$(CYAN)Opening documentation...$(NC)"
-	@if command -v xdg-open > /dev/null; then \
-		xdg-open http://localhost:8000/docs; \
-	elif command -v open > /dev/null; then \
-		open http://localhost:8000/docs; \
-	else \
-		echo "$(YELLOW)Open http://localhost:8000/docs in your browser$(NC)"; \
-	fi
-
-# All-in-one commands
-all: clean install test lint ## Clean, install, test, and lint
-
-dev: setup install-dev env ## Full development setup
-	@echo "$(GREEN)✓ Development environment ready$(NC)"
-	@echo "$(YELLOW)Activate venv: source venv/bin/activate$(NC)"
-	@echo "$(YELLOW)Run server: make run$(NC)"
-
-quick-start: env docker-up ## Quick start with Docker (recommended)
-	@echo ""
-	@echo "$(GREEN)✓ AcquireMock is running!$(NC)"
-	@echo ""
-	@echo "$(CYAN)Access points:$(NC)"
-	@echo "  • Application: $(YELLOW)http://localhost:8000$(NC)"
-	@echo "  • Test Page:   $(YELLOW)http://localhost:8000/test$(NC)"
-	@echo "  • API Docs:    $(YELLOW)http://localhost:8000/docs$(NC)"
-	@echo "  • Health:      $(YELLOW)http://localhost:8000/health$(NC)"
-	@echo ""
-	@echo "$(CYAN)Useful commands:$(NC)"
-	@echo "  • View logs:  $(YELLOW)make docker-logs$(NC)"
-	@echo "  • Stop:       $(YELLOW)make docker-down$(NC)"
-	@echo "  • Restart:    $(YELLOW)make docker-rebuild$(NC)"
-	@echo ""
-
-# CI/CD helpers
-ci-test: install-dev test lint type-check ## Run all CI checks
-	@echo "$(GREEN)✓ All CI checks passed$(NC)"
-
-# Version info
-version: ## Show version information
-	@echo "$(CYAN)AcquireMock Version Information$(NC)"
-	@python -c "import sys; print(f'Python: {sys.version}')"
-	@pip show fastapi | grep Version || echo "FastAPI not installed"
-	@docker --version 2>/dev/null || echo "Docker not installed"
-	@docker-compose --version 2>/dev/null || echo "Docker Compose not installed"
+quick-start: env migrate run

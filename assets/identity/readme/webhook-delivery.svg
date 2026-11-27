@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 440" width="640" height="440" role="img" aria-label="Webhook Delivery">
+  <defs>
+    <clipPath id="cap-webhook-delivery-clip">
+      <rect x="0" y="0" width="640" height="440" rx="22" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#cap-webhook-delivery-clip)">
+    <rect width="640" height="440" fill="#F5F1ED" />
+
+    <!-- Subtle top index tag -->
+    <text x="44.0" y="48.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="11.0" font-weight="700" fill="#B04446" letter-spacing="1.32px">CAPABILITY  04</text>
+
+    <!-- Abstract Brand-Derived Geometric Stage (y=56..304) -->
+    
+      <!-- Origin loop (left) -->
+      <g transform="translate(164.00 184.00) scale(1.3800) translate(-64 -64)"><path d="M 21.5 102.5 C 26.5 58.5 38.5 21.5 58.5 21.5 C 80.5 21.5 106.5 45.5 106.5 73.5 C 106.5 94.5 95.5 106.5 78.5 106.5 C 63.5 106.5 57.5 93.5 57.5 73.5" fill="none" stroke="#242222" stroke-width="15.50" stroke-linecap="round" stroke-linejoin="round" /></g>
+
+      <!-- Concentric signed event waves -->
+      <path d="M 282 132 A 76 76 0 0 1 282 236" fill="none" stroke="#F2B8B3" stroke-width="14" stroke-linecap="round" />
+      <path d="M 332 108 A 110 110 0 0 1 332 260" fill="none" stroke="#E99A98" stroke-width="14" stroke-linecap="round" />
+      <path d="M 384 94 A 140 140 0 0 1 384 274" fill="none" stroke="#F2B8B3" stroke-width="6" stroke-linecap="round" opacity="0.7" />
+
+      <!-- Signed receiver aperture cradle (right) -->
+      <path d="M 504 122 C 452 122, 434 152, 434 184 C 434 216, 452 246, 504 246"
+            fill="none" stroke="#D96F70" stroke-width="16" stroke-linecap="round" />
+      <circle cx="504" cy="184" r="16" fill="#E99A98" />
+      <circle cx="504" cy="184" r="6" fill="#F5F1ED" />
+    
+
+    <!-- Editorial Caption Bar -->
+    <line x1="44" y1="316" x2="596" y2="316" stroke="#DDD4CA" stroke-width="1" />
+    <text x="44.0" y="358.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="24.0" font-weight="600" fill="#242222" letter-spacing="-0.36px">Webhook Delivery</text>
+    <text x="44.0" y="392.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="15.0" font-weight="500" fill="#5C5757">Signed asynchronous callbacks with HMAC verification.</text>
+
+    <!-- Crisp 1px outer hairline -->
+    <rect x="0.5" y="0.5" width="639" height="439" rx="22" fill="none" stroke="#E3DBD2" stroke-width="1" />
+  </g>
+</svg>
