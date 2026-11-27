@@ -1,0 +1,39 @@
+.wrap {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: var(--space-16) var(--space-8);
+}
+
+.card {
+  max-width: 520px;
+  padding: var(--space-8);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.code {
+  font-size: 13px;
+  color: var(--brand-coral-ink);
+}
+
+.title {
+  margin-top: var(--space-2);
+  font-size: 28px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.copy {
+  margin-top: var(--space-3);
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.actions {
+  margin-top: var(--space-6);
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}

@@ -1,0 +1,254 @@
+.statusStrip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+
+.statusCell {
+  padding: var(--space-4) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-right: 1px solid var(--border-subtle);
+}
+
+.statusCell:last-child {
+  border-right: none;
+}
+
+.cellLabel {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.cellValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.dotOk {
+  background: var(--status-paid-text);
+}
+
+.dotOff {
+  background: var(--text-muted);
+}
+
+.stateSpacing {
+  margin-top: var(--space-6);
+}
+
+.metricsGrid {
+  margin-top: var(--space-6);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.metricBlock {
+  padding: var(--space-5);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metricLabel {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.metricValue {
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--text-primary);
+}
+
+.metricSub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.mainSplit {
+  margin-top: var(--space-8);
+  display: grid;
+  grid-template-columns: 1.45fr 0.85fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.sectionLink {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand-coral-ink);
+}
+
+.tableWrap {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 14px;
+}
+
+.table th {
+  padding: 12px var(--space-4);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.table td {
+  padding: 12px var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: var(--bg-subtle);
+}
+
+.numCol {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.dateCol {
+  color: var(--text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.rowLink {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.refText {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.idText {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.actionsSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.actionList {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.actionRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.actionRow:last-child {
+  border-bottom: none;
+}
+
+.actionRow:hover {
+  background: var(--bg-subtle);
+}
+
+.actionTitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.actionDesc {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 1120px) {
+  .statusStrip,
+  .metricsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .statusCell:nth-child(2) {
+    border-right: none;
+  }
+
+  .statusCell:nth-child(1),
+  .statusCell:nth-child(2) {
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .mainSplit {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .statusStrip,
+  .metricsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .statusCell {
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .statusCell:last-child {
+    border-bottom: none;
+  }
+}
