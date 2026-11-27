@@ -1,4 +1,5 @@
-﻿import os
+﻿import html
+import os
 import logging
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -79,7 +80,8 @@ async def send_otp_email(to_email: str, otp_code: str):
         logger.warning(f"Email template not found at {template_path}")
         html_content = f"<h1>Code: {otp_code}</h1>"
 
-    html_body = html_content.replace("{{ code }}", str(otp_code))
+    safe_otp = html.escape(str(otp_code))
+    html_body = html_content.replace("{{ code }}", safe_otp)
     text_body = f"Your verification code: {otp_code}"
 
     await send_email(to_email, subject, html_body, text_body)
@@ -98,12 +100,12 @@ async def send_receipt_email(to_email: str, payment_data: dict):
         html_content = "<h1>Payment Successful</h1>"
 
     replacements = {
-        "{{ amount }}": str(payment_data.get('amount')),
-        "{{ reference }}": str(payment_data.get('reference')),
-        "{{ date }}": datetime.now().strftime("%d.%m.%Y %H:%M"),
-        "{{ card_mask }}": payment_data.get('card_mask', '****'),
-        "{{ payment_id }}": payment_data.get('payment_id', ''),
-        "{{ currency_symbol }}": currency_symbol
+        "{{ amount }}": html.escape(str(payment_data.get('amount'))),
+        "{{ reference }}": html.escape(str(payment_data.get('reference'))),
+        "{{ date }}": html.escape(datetime.now().strftime("%d.%m.%Y %H:%M")),
+        "{{ card_mask }}": html.escape(str(payment_data.get('card_mask', '****'))),
+        "{{ payment_id }}": html.escape(str(payment_data.get('payment_id', ''))),
+        "{{ currency_symbol }}": html.escape(str(currency_symbol))
     }
 
     for key, value in replacements.items():

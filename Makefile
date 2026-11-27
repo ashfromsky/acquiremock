@@ -39,11 +39,11 @@ install-dev: ## Install development dependencies
 # Running the application
 run: ## Run the application locally
 	@echo "$(CYAN)Starting AcquireMock...$(NC)"
-	uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+	uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 run-prod: ## Run in production mode (no reload)
 	@echo "$(CYAN)Starting AcquireMock (production)...$(NC)"
-	gunicorn main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+	gunicorn app.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
 
 # Docker commands
 docker-up: ## Start with Docker Compose
@@ -84,7 +84,7 @@ test-cov: ## Run tests with coverage
 
 test-integration: ## Run integration tests (requires running server)
 	@echo "$(CYAN)Running integration tests...$(NC)"
-	python tests/test_payment.py
+	python scripts/manual_payment_test.py
 
 # Code Quality
 lint: ## Run linters (flake8)

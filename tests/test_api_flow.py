@@ -58,3 +58,16 @@ async def test_checkout_page_load(client: AsyncClient):
 
     assert checkout_resp.status_code == 200
     assert "TEST-CHECKOUT-FLOW" in checkout_resp.text
+
+
+async def test_public_pages_and_404_render(client: AsyncClient):
+    root_resp = await client.get("/")
+    assert root_resp.status_code == 200
+    assert "AcquireMock" in root_resp.text
+
+    test_resp = await client.get("/test")
+    assert test_resp.status_code == 200
+    assert "http://localhost:8000" in test_resp.text
+
+    not_found_resp = await client.get("/nonexistent-page-xyz")
+    assert not_found_resp.status_code == 404

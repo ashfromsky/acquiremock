@@ -77,7 +77,7 @@ def calculate_order_amount(product_id: str, quantity: int) -> int:
 
 def verify_webhook_signature(payload: dict, signature: str) -> bool:
     """Verify HMAC-SHA256 signature from AcquireMock."""
-    message = json.dumps(payload, sort_keys=True)
+    message = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     expected_signature = hmac.new(
         WEBHOOK_SECRET.encode(),
         message.encode(),

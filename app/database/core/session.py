@@ -6,6 +6,8 @@ import os
 load_dotenv()
 
 DATABASE_URL = os.getenv('DATABASE_URL')
+if not DATABASE_URL:
+    raise EnvironmentError("CRITICAL: DATABASE_URL must be set as an environment variable.")
 
 connect_args = {}
 if "sqlite" in DATABASE_URL:
