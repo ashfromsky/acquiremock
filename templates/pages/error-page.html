@@ -1,40 +1,63 @@
 ﻿<!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Помилка оплати | AcquireMock</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body { background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .error-card { background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 100%; }
-        .icon-box { color: #dc3545; font-size: 60px; margin-bottom: 20px; }
-        .btn-retry { background-color: #007bff; color: white; display: block; width: 100%; padding: 12px; border-radius: 8px; text-decoration: none; margin-top: 20px; font-weight: bold; transition: 0.3s; }
-        .btn-retry:hover { background-color: #0056b3; }
-        .btn-back { color: #6c757d; display: block; margin-top: 15px; text-decoration: none; font-size: 14px; }
-        .btn-back:hover { text-decoration: underline; }
-    </style>
+    <title>Payment Error - AcquireMock</title>
+    <link rel="icon" type="image/png" href="/static/brand/favicon-light-32.png" media="(prefers-color-scheme: light)">
+    <link rel="icon" type="image/png" href="/static/brand/favicon-dark-32.png" media="(prefers-color-scheme: dark)">
+    <link rel="icon" type="image/png" href="/static/brand/favicon-light-32.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/tokens.css">
+    <link rel="stylesheet" href="/static/css/payment.css">
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem('theme');
+                var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (saved === 'dark' || (!saved && prefersDark)) {
+                    document.documentElement.dataset.theme = 'dark';
+                }
+            } catch (e) {}
+        })();
+    </script>
 </head>
 <body>
+    <div class="pay-shell">
+        <header class="pay-topbar">
+            <a href="/" class="brand-link" aria-label="AcquireMock">
+                <img src="/static/brand/logo-horizontal-light.png" alt="AcquireMock" height="22" class="brand-logo-light">
+                <img src="/static/brand/logo-horizontal-dark.png" alt="AcquireMock" height="22" class="brand-logo-dark">
+            </a>
 
-    <div class="error-card">
-        <div class="icon-box">
-            <i class="fa-regular fa-circle-xmark"></i>
-        </div>
-        <h2 style="margin-bottom: 10px;">Оплата не пройшла</h2>
-        <p style="color: #666; line-height: 1.5;">
-            {{ error_message }}
-        </p>
+            <div class="topbar-controls">
+                <button type="button" class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+                    <svg class="sun-icon" style="display: none;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                    <svg class="moon-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </button>
+            </div>
+        </header>
 
-        <a href="/checkout/{{ payment_id }}" class="btn-retry">
-            <i class="fa fa-refresh"></i> Спробувати ще раз
-        </a>
+        <main class="pay-card">
+            <div class="status-icon err" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </div>
 
-        <a href="{{ merchant_url }}" class="btn-back">
-            <i class="fa fa-arrow-left"></i> Скасувати та повернутися в магазин
-        </a>
+            <h1 class="card-title">Payment could not be completed</h1>
+            <p class="card-subtitle" style="margin-bottom: 24px;">{{ error_message }}</p>
+
+            <div class="form-stack">
+                <a href="/checkout/{{ payment_id }}" class="btn-primary">Try again</a>
+                <a href="{{ merchant_url }}" class="btn-secondary">Cancel and return to merchant</a>
+            </div>
+        </main>
     </div>
 
+    <script src="/static/js/i18n.js"></script>
 </body>
 </html>

@@ -1,101 +1,154 @@
 ﻿<!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AcquireMock</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <title>Checkout - AcquireMock</title>
+    <link rel="icon" type="image/png" href="/static/brand/favicon-light-32.png" media="(prefers-color-scheme: light)">
+    <link rel="icon" type="image/png" href="/static/brand/favicon-dark-32.png" media="(prefers-color-scheme: dark)">
+    <link rel="icon" type="image/png" href="/static/brand/favicon-light-32.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/tokens.css">
+    <link rel="stylesheet" href="/static/css/payment.css">
+    <script>
+        (function () {
+            try {
+                var saved = localStorage.getItem('theme');
+                var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                if (saved === 'dark' || (!saved && prefersDark)) {
+                    document.documentElement.dataset.theme = 'dark';
+                }
+            } catch (e) {}
+        })();
+    </script>
 </head>
 <body>
-
-    <div class="top-controls">
-        <div class="lang-switcher">
-            <button class="lang-btn" onclick="changeLanguage('uk')">UK</button>
-            <button class="lang-btn" onclick="changeLanguage('en')">EN</button>
-            <button class="lang-btn" onclick="changeLanguage('de')">DE</button>
-            <button class="lang-btn" onclick="changeLanguage('ru')">RU</button>
-        </div>
-        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
-            <svg class="sun-icon" style="display: none;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-            <svg class="moon-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-        </button>
-    </div>
-
-    <div class="modal-overlay" id="emailModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);z-index:99;display:none;justify-content:center;align-items:center;">
+    <div class="modal-overlay" id="emailModal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
         <div class="modal-card">
             <div id="step1" class="step-container active">
-                <h2 class="title" data-i18n="enter_email" style="font-size:24px; margin-bottom:12px;">Вхід</h2>
-                <p style="color:var(--text-secondary); margin-bottom:32px; font-size:14px;" data-i18n="enter_email_desc">Введіть ваш Email</p>
-                <div class="form-group">
-                    <input type="email" id="modalEmailInput" class="form-input" placeholder="name@example.com">
+                <h2 id="modalTitle" class="card-title" data-i18n="enter_email">Sign in</h2>
+                <p class="card-subtitle" style="margin-bottom: 20px;" data-i18n="enter_email_desc">Enter your email to continue to checkout</p>
+                <div class="form-stack">
+                    <div class="field-group">
+                        <label class="field-label" for="modalEmailInput">Email</label>
+                        <input type="email" id="modalEmailInput" class="field-input" placeholder="name@example.com" autocomplete="email">
+                    </div>
+                    <div id="step1Error" class="inline-alert" role="alert"></div>
+                    <button type="button" class="btn-primary" id="sendCodeBtn" onclick="sendAuthCode()" data-i18n="get_code">Send code</button>
                 </div>
-                <button class="submit-btn" onclick="sendAuthCode()" data-i18n="get_code">Отримати код</button>
             </div>
 
             <div id="step2" class="step-container">
-                <h2 class="title" data-i18n="verify_title" style="font-size:24px; margin-bottom:12px;">Підтвердження</h2>
-                <p style="color:var(--text-secondary); margin-bottom:32px; font-size:14px;"><span data-i18n="verify_desc">Код на</span> <span id="displayEmail" style="color:var(--accent-primary); font-weight:600;"></span></p>
-                <div class="form-group">
-                    <input type="text" id="modalCodeInput" class="form-input" placeholder="0000" maxlength="4" style="text-align:center; letter-spacing:8px; font-size:24px;">
+                <h2 class="card-title" data-i18n="verify_title">Email verification</h2>
+                <p class="card-subtitle" style="margin-bottom: 20px;">
+                    <span data-i18n="verify_desc">We sent a 4-digit code to</span>
+                    <strong id="displayEmail" style="color: var(--text-primary);"></strong>
+                </p>
+                <div class="form-stack">
+                    <div class="field-group">
+                        <label class="field-label" for="modalCodeInput">Verification code</label>
+                        <input type="text" id="modalCodeInput" class="field-input otp-input" placeholder="0000" maxlength="4" inputmode="numeric" autocomplete="one-time-code">
+                    </div>
+                    <div id="step2Error" class="inline-alert" role="alert"></div>
+                    <button type="button" class="btn-primary" id="verifyCodeBtn" onclick="verifyAuthCode()" data-i18n="verify_btn">Continue</button>
+                    <button type="button" class="btn-link" onclick="showStep(1)" data-i18n="change_email">Change email</button>
                 </div>
-                <button class="submit-btn" onclick="verifyAuthCode()" data-i18n="verify_btn">Увійти</button>
-                <div style="margin-top:24px; font-size:13px; color:var(--text-secondary); cursor:pointer; text-decoration:underline; text-align:center;" onclick="showStep(1)" data-i18n="change_email">Змінити Email</div>
             </div>
         </div>
     </div>
 
-    <div class="container" id="mainContainer">
-        <div class="amount-section">
-            <div style="font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--accent-primary); font-weight:700;" data-i18n="to_pay">До сплати</div>
-            <div class="amount">{{ amount }} {{ currency_symbol }}</div>
-            <div class="ref-text">#{{ reference }}</div>
-            <div id="currentUserDisplay" style="margin-top:16px; font-size:12px; color:var(--text-secondary); cursor:pointer; text-decoration:underline;" onclick="resetUser()" data-i18n="change_acc">
-                Змінити акаунт
-            </div>
-        </div>
+    <div class="pay-shell">
+        <header class="pay-topbar">
+            <a href="/" class="brand-link" aria-label="AcquireMock">
+                <img src="/static/brand/logo-horizontal-light.png" alt="AcquireMock" height="22" class="brand-logo-light">
+                <img src="/static/brand/logo-horizontal-dark.png" alt="AcquireMock" height="22" class="brand-logo-dark">
+            </a>
 
-        <form id="paymentForm" method="POST" action="/api/pay/{{ payment_id }}">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-            <input type="hidden" name="email" id="hiddenEmail">
-            <input type="hidden" name="saved_card_id" id="savedCardId">
-
-            <div id="savedCardsSection" style="display: none; margin-bottom:24px;">
-                <label class="form-label" data-i18n="your_cards">Ваші карти</label>
-                <div class="saved-cards-wrapper" id="savedCardsList"></div>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" data-i18n="card_label">Номер картки</label>
-                <input type="text" id="cardNumber" name="card_number" class="form-input" placeholder="0000 0000 0000 0000" maxlength="19" required>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                <div class="form-group">
-                    <label class="form-label" data-i18n="expiry_label">Термін</label>
-                    <input type="text" id="expiry" name="expiry" class="form-input" placeholder="MM/YY" maxlength="5" required>
+            <div class="topbar-controls">
+                <div class="lang-switcher" role="group" aria-label="Language">
+                    <button type="button" class="lang-btn" onclick="changeLanguage('uk')">UK</button>
+                    <button type="button" class="lang-btn" onclick="changeLanguage('en')">EN</button>
+                    <button type="button" class="lang-btn" onclick="changeLanguage('de')">DE</button>
+                    <button type="button" class="lang-btn" onclick="changeLanguage('ru')">RU</button>
                 </div>
-                <div class="form-group">
-                    <label class="form-label" data-i18n="cvv_label">CVV</label>
-                    <input type="text" id="cvv" name="cvv" class="form-input" placeholder="123" maxlength="3" required>
+                <button type="button" class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
+                    <svg class="sun-icon" style="display: none;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+                    <svg class="moon-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+                </button>
+            </div>
+        </header>
+
+        <main class="pay-card" id="mainContainer">
+            <div class="amount-block">
+                <span class="amount-eyebrow" data-i18n="to_pay">Amount due</span>
+                <div class="amount-value">{{ amount }} {{ currency_symbol }}</div>
+                <div class="amount-meta">
+                    <span class="ref-badge">#{{ reference }}</span>
+                    <button type="button" id="currentUserDisplay" class="account-switch" onclick="resetUser()" data-i18n="change_acc">
+                        Switch account
+                    </button>
                 </div>
             </div>
 
-            <label class="checkbox-wrapper">
-                <input type="checkbox" id="saveCard" name="save_card" value="true">
-                <span data-i18n="save_card">Зберегти карту</span>
-            </label>
+            <form id="paymentForm" method="POST" action="/api/pay/{{ payment_id }}" class="form-stack">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="email" id="hiddenEmail">
+                <input type="hidden" name="saved_card_id" id="savedCardId">
 
-            <button type="submit" class="submit-btn" id="payBtn" data-i18n="pay_btn" data-amount="{{ amount }}" data-currency="{{ currency_symbol }}">Оплатити {{ amount }} {{ currency_symbol }}</button>
-        </form>
-    </div>
+                <div id="savedCardsSection" style="display: none;">
+                    <div class="saved-cards-header">
+                        <span class="field-label" data-i18n="your_cards">Saved cards</span>
+                        <button type="button" id="clearSavedCardBtn" class="btn-link" style="display: none; padding: 0;" onclick="clearSavedCardSelection()" data-i18n="use_other_card">
+                            Use another card
+                        </button>
+                    </div>
+                    <div class="saved-cards-list" id="savedCardsList"></div>
+                </div>
 
-    <div class="logo-container" style="text-align:center; margin-top:32px; opacity:0.6;">
-        <img src="/static/images/AcquireMock.svg" alt="AcquireMock" style="height:20px; width:auto;">
-    </div>
+                <div class="field-group">
+                    <label class="field-label" for="cardNumber" data-i18n="card_label">Card number</label>
+                    <input type="text" id="cardNumber" name="card_number" class="field-input mono" placeholder="0000 0000 0000 0000" maxlength="19" inputmode="numeric" required>
+                </div>
 
-    <div class="container" id="historyContainer" style="margin-top:24px; display:none; background:transparent; border:none; box-shadow:none; padding:0;">
-        <div style="color:var(--text-main); font-family:'Playfair Display', serif; font-size:20px; margin-bottom:16px; text-align:center;" data-i18n="history_title">Історія транзакцій</div>
-        <div id="historyList" style="background:var(--card-bg); padding:24px; border-radius:24px; box-shadow:var(--shadow-soft);"></div>
+                <div class="form-row-2">
+                    <div class="field-group">
+                        <label class="field-label" for="expiry" data-i18n="expiry_label">Expiry</label>
+                        <input type="text" id="expiry" name="expiry" class="field-input mono" placeholder="MM/YY" maxlength="5" inputmode="numeric" required>
+                    </div>
+                    <div class="field-group">
+                        <label class="field-label" for="cvv" data-i18n="cvv_label">CVV</label>
+                        <input type="text" id="cvv" name="cvv" class="field-input mono" placeholder="123" maxlength="3" inputmode="numeric" required>
+                    </div>
+                </div>
+
+                <label class="checkbox-row">
+                    <input type="checkbox" id="saveCard" name="save_card" value="true">
+                    <span data-i18n="save_card">Save card for future payments</span>
+                </label>
+
+                <button type="submit" class="btn-primary" id="payBtn" data-i18n="pay_btn" data-amount="{{ amount }}" data-currency="{{ currency_symbol }}">
+                    Pay {{ amount }} {{ currency_symbol }}
+                </button>
+            </form>
+
+            <div class="helper-box">
+                <span class="mono" data-i18n="sandbox_note">Sandbox card: 4444 4444 4444 4444</span>
+                <button type="button" class="btn-link" style="padding: 0;" onclick="fillSandboxCard()" data-i18n="fill_test_card">
+                    Fill test card
+                </button>
+            </div>
+        </main>
+
+        <section class="pay-card" id="historyContainer" style="display: none;" aria-label="Recent transactions">
+            <h2 class="card-title" style="font-size: 16px; margin-bottom: 12px;" data-i18n="history_title">Recent transactions</h2>
+            <div id="historyList"></div>
+        </section>
+
+        <footer class="pay-footer" data-i18n="mock_disclaimer">
+            AcquireMock sandbox checkout. Never enter real payment card details.
+        </footer>
     </div>
 
     <script src="/static/js/i18n.js"></script>
@@ -109,21 +162,42 @@
                 initializeUser(prefillEmail);
             } else {
                 document.getElementById('emailModal').style.display = 'flex';
+                document.getElementById('modalEmailInput').focus();
             }
         });
 
+        function showInlineError(id, msg) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            if (!msg) {
+                el.textContent = '';
+                el.classList.remove('visible');
+                return;
+            }
+            el.textContent = msg;
+            el.classList.add('visible');
+        }
+
         function showStep(step) {
+            showInlineError('step1Error', '');
+            showInlineError('step2Error', '');
             document.querySelectorAll('.step-container').forEach(el => el.classList.remove('active'));
             document.getElementById('step' + step).classList.add('active');
+            if (step === 1) {
+                document.getElementById('modalEmailInput').focus();
+            } else {
+                document.getElementById('modalCodeInput').focus();
+            }
         }
 
         async function sendAuthCode() {
-            const email = document.getElementById('modalEmailInput').value;
-            if(!email || !email.includes('@')) {
-                alert('Введіть коректний Email');
+            const email = document.getElementById('modalEmailInput').value.trim();
+            if (!email || !email.includes('@')) {
+                showInlineError('step1Error', 'Enter a valid email address.');
                 return;
             }
-            const btn = document.querySelector('#step1 .submit-btn');
+            showInlineError('step1Error', '');
+            const btn = document.getElementById('sendCodeBtn');
             btn.disabled = true;
             try {
                 const res = await fetch('/api/auth/send-code', {
@@ -131,19 +205,29 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({email: email})
                 });
-                if(res.ok) {
+                if (res.ok) {
                     currentAuthEmail = email;
-                    document.getElementById('displayEmail').innerText = email;
+                    document.getElementById('displayEmail').textContent = email;
                     showStep(2);
-                } else alert('Error sending code');
-            } catch(e) { alert('Network Error'); }
-            finally { btn.disabled = false; }
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    showInlineError('step1Error', errData.detail || 'Could not send verification code.');
+                }
+            } catch (e) {
+                showInlineError('step1Error', 'Network error while sending code.');
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         async function verifyAuthCode() {
-            const code = document.getElementById('modalCodeInput').value;
-            if(code.length < 4) return;
-            const btn = document.querySelector('#step2 .submit-btn');
+            const code = document.getElementById('modalCodeInput').value.trim();
+            if (code.length < 4) {
+                showInlineError('step2Error', 'Enter the 4-digit verification code.');
+                return;
+            }
+            showInlineError('step2Error', '');
+            const btn = document.getElementById('verifyCodeBtn');
             btn.disabled = true;
             try {
                 const res = await fetch('/api/auth/verify-code', {
@@ -151,18 +235,24 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({email: currentAuthEmail, code: code})
                 });
-                if(res.ok) {
+                if (res.ok) {
                     initializeUser(currentAuthEmail);
-                } else { alert('Invalid Code'); btn.disabled = false; }
-            } catch(e) { alert('Network Error'); btn.disabled = false; }
+                } else {
+                    const errData = await res.json().catch(() => ({}));
+                    showInlineError('step2Error', errData.detail || 'Invalid or expired code.');
+                }
+            } catch (e) {
+                showInlineError('step2Error', 'Network error while verifying code.');
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         function initializeUser(email) {
             document.getElementById('emailModal').style.display = 'none';
-            document.getElementById('mainContainer').classList.add('visible');
             document.getElementById('hiddenEmail').value = email;
-            document.getElementById('currentUserDisplay').innerText = email + " (Змінити)";
-            fetchUserData(email);
+            document.getElementById('currentUserDisplay').textContent = email + ' (Switch)';
+            fetchUserData();
         }
 
         async function resetUser() {
@@ -170,7 +260,7 @@
             location.reload();
         }
 
-        async function fetchUserData(email) {
+        async function fetchUserData() {
             try {
                 const response = await fetch('/api/user-info');
                 if (!response.ok) return;
@@ -180,9 +270,10 @@
                 if (data.cards && data.cards.length > 0) {
                     document.getElementById('savedCardsSection').style.display = 'block';
                     data.cards.forEach(card => {
-                        const chip = document.createElement('div');
+                        const chip = document.createElement('button');
+                        chip.type = 'button';
                         chip.className = 'saved-card-chip';
-                        chip.innerText = card.mask;
+                        chip.textContent = card.mask + ' · ' + card.expiry;
                         chip.onclick = () => fillCard(card, chip);
                         cardsDiv.appendChild(chip);
                     });
@@ -193,21 +284,21 @@
                     document.getElementById('historyContainer').style.display = 'block';
                     data.operations.forEach(op => {
                         const row = document.createElement('div');
-                        row.style.cssText = 'display:flex; justify-content:space-between; margin-bottom:12px; border-bottom:1px solid rgba(0,0,0,0.05); padding-bottom:8px;';
+                        row.className = 'history-row';
 
                         const left = document.createElement('div');
                         const refEl = document.createElement('div');
-                        refEl.style.cssText = 'font-weight:600; color:var(--text-main)';
+                        refEl.style.cssText = 'font-weight: 500; font-size: 14px;';
                         refEl.textContent = op.reference;
                         const metaEl = document.createElement('div');
-                        metaEl.style.cssText = 'font-size:11px; color:var(--text-secondary)';
-                        metaEl.textContent = `${op.date} • ${op.card_mask}`;
+                        metaEl.style.cssText = 'font-size: 12px; color: var(--text-secondary);';
+                        metaEl.textContent = `${op.date} · ${op.card_mask}`;
                         left.appendChild(refEl);
                         left.appendChild(metaEl);
 
                         const right = document.createElement('div');
-                        right.style.cssText = 'color:var(--accent-primary); font-weight:600;';
-                        right.textContent = `+${op.amount} ${currencySymbol}`;
+                        right.style.cssText = 'font-family: var(--font-mono); font-size: 14px; font-weight: 500;';
+                        right.textContent = `${op.amount} ${currencySymbol}`;
 
                         row.appendChild(left);
                         row.appendChild(right);
@@ -222,6 +313,7 @@
             element.classList.add('active');
 
             document.getElementById('savedCardId').value = card.id;
+            document.getElementById('clearSavedCardBtn').style.display = 'inline';
 
             const cardInput = document.getElementById('cardNumber');
             cardInput.value = "**** **** **** " + card.mask.slice(-4);
@@ -239,10 +331,37 @@
             document.getElementById('saveCard').checked = false;
         }
 
-        document.getElementById('cardNumber').addEventListener('input', function(e) {
-            let value = e.target.value.replace(/\s/g, '');
-            e.target.value = value.match(/.{1,4}/g)?.join(' ') || value;
+        function clearSavedCardSelection() {
+            document.getElementById('savedCardId').value = '';
+            document.getElementById('clearSavedCardBtn').style.display = 'none';
+            document.querySelectorAll('.saved-card-chip').forEach(c => c.classList.remove('active'));
 
+            const cardInput = document.getElementById('cardNumber');
+            cardInput.disabled = false;
+            cardInput.value = '';
+
+            const expiryInput = document.getElementById('expiry');
+            expiryInput.disabled = false;
+            expiryInput.value = '';
+
+            const cvvInput = document.getElementById('cvv');
+            cvvInput.disabled = false;
+            cvvInput.value = '';
+
+            document.getElementById('saveCard').disabled = false;
+            cardInput.focus();
+        }
+
+        function fillSandboxCard() {
+            clearSavedCardSelection();
+            document.getElementById('cardNumber').value = '4444 4444 4444 4444';
+            document.getElementById('expiry').value = '12/30';
+            document.getElementById('cvv').value = '123';
+        }
+
+        document.getElementById('cardNumber').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '').slice(0, 16);
+            e.target.value = value.match(/.{1,4}/g)?.join(' ') || value;
             document.getElementById('savedCardId').value = '';
             document.querySelectorAll('.saved-card-chip').forEach(c => c.classList.remove('active'));
         });
@@ -251,6 +370,14 @@
             let value = e.target.value.replace(/\D/g, '');
             if (value.length >= 2) value = value.slice(0, 2) + '/' + value.slice(2, 4);
             e.target.value = value;
+        });
+
+        document.getElementById('modalEmailInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); sendAuthCode(); }
+        });
+
+        document.getElementById('modalCodeInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); verifyAuthCode(); }
         });
     </script>
 </body>

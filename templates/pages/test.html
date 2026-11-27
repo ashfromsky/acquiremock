@@ -3,165 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AcquireMock Demo</title>
-    <link rel="stylesheet" href="/static/css/style.css">
-    <style>
-        .result-container {
-            display: none;
-            margin-top: 32px;
-            padding-top: 32px;
-            border-top: 1px dashed rgba(0,0,0,0.1);
-            animation: slideDown 0.3s ease-out;
-        }
-        .dark-mode .result-container {
-            border-top-color: rgba(255,255,255,0.1);
-        }
-        @keyframes slideDown {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .url-box {
-            background: var(--input-bg);
-            padding: 16px;
-            border-radius: 12px;
-            font-family: monospace;
-            font-size: 13px;
-            color: var(--text-secondary);
-            word-break: break-all;
-            margin-top: 8px;
-            border: 1px solid transparent;
-            cursor: pointer;
-        }
-        .url-box:hover {
-            border-color: var(--accent-primary);
-            color: var(--text-main);
-        }
-    </style>
+    <title>Test Playground - AcquireMock</title>
+    <meta name="acquiremock-base-url" content="{{ base_url or 'http://localhost:8000' }}">
+    <link rel="icon" type="image/png" href="/static/brand/favicon-light-32.png" media="(prefers-color-scheme: light)">
+    <link rel="icon" type="image/png" href="/static/brand/favicon-dark-32.png" media="(prefers-color-scheme: dark)">
+    <link rel="stylesheet" href="/static/css/tokens.css">
+    <link rel="stylesheet" href="/static/css/payment.css">
 </head>
 <body>
-
-    <div class="top-controls">
-        <div class="lang-switcher">
-            <button class="lang-btn" onclick="changeLanguage('uk')">UK</button>
-            <button class="lang-btn" onclick="changeLanguage('en')">EN</button>
-            <button class="lang-btn" onclick="changeLanguage('de')">DE</button>
-            <button class="lang-btn" onclick="changeLanguage('ru')">RU</button>
-        </div>
-        <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">
-            <svg class="sun-icon" style="display: none;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-            <svg class="moon-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-        </button>
-    </div>
-
-    <div class="container">
-        <div style="text-align:center; margin-bottom:30px;">
-            <img src="/static/images/AcquireMock.svg" style="height:24px; opacity: 0.8;">
-        </div>
-
-        <h1 class="title" style="text-align:center; margin-bottom:10px;" data-i18n="demo_title">Demo Dashboard</h1>
-        <p style="text-align:center; color:var(--text-secondary); margin-bottom:30px; font-size:14px;" data-i18n="demo_subtitle">
-            Create a test payment to verify the gateway
-        </p>
-
-        <form id="testForm">
-            <div class="form-group">
-                <label class="form-label" data-i18n="sum_label">Amount</label>
-                <input type="number" id="amount" class="form-input" value="25000" required>
-            </div>
-
-            <div class="form-group">
-                <label class="form-label" data-i18n="order_num">Reference</label>
-                <input type="text" id="reference" class="form-input" value="TEST-ORDER-001" required>
-            </div>
-
-            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.05);">
-                <div class="form-group">
-                    <label class="form-label" data-i18n="webhook_label">Webhook URL</label>
-                    <input type="url" id="webhookUrl" class="form-input" value="https://webhook.site/unique-id" style="font-size: 13px;">
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label" data-i18n="redirect_label">Redirect URL</label>
-                    <input type="url" id="redirectUrl" class="form-input" value="http://localhost:8000" style="font-size: 13px;">
-                </div>
-            </div>
-
-            <button type="submit" class="submit-btn" id="submitBtn" data-i18n="create_invoice_btn">Create Invoice</button>
-        </form>
-
-        <div id="resultContainer" class="result-container">
-            <div style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:16px;">
-                <div style="width:24px; height:24px; background:rgba(72, 187, 120, 0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; color:#48bb78;">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                </div>
-                <span style="font-weight:700; color:var(--text-main);" data-i18n="result_title">Invoice Created!</span>
-            </div>
-
-            <a href="#" id="paymentLinkBtn" target="_blank" class="submit-btn" style="margin-top:0; background:var(--text-main); color:var(--card-bg);" data-i18n="open_page_btn">
-                Go to Payment Page
+    <div class="pay-shell">
+        <header class="pay-topbar">
+            <a href="/" class="brand-link" aria-label="AcquireMock">
+                <img src="/static/brand/logo-horizontal-light.png" alt="AcquireMock" height="22" class="brand-logo-light">
+                <img src="/static/brand/logo-horizontal-dark.png" alt="AcquireMock" height="22" class="brand-logo-dark">
             </a>
-
-            <p style="text-align:center; font-size:11px; color:var(--text-secondary); margin-top:16px;" data-i18n="or_copy_link">
-                or copy link:
+        </header>
+        <main class="pay-card">
+            <h1 class="card-title">Invoice test fallback</h1>
+            <p class="card-subtitle" style="margin-bottom: 20px;">
+                Create a test invoice against {{ base_url or 'http://localhost:8000' }}.
             </p>
-            <div class="url-box" id="urlBox" onclick="copyUrl()"></div>
-        </div>
+            <form id="testForm" class="form-stack">
+                <div class="field-group">
+                    <label class="field-label" for="amount">Amount</label>
+                    <input type="number" id="amount" class="field-input mono" value="25000" required>
+                </div>
+                <div class="field-group">
+                    <label class="field-label" for="reference">Reference</label>
+                    <input type="text" id="reference" class="field-input" value="TEST-ORDER-001" required>
+                </div>
+                <div class="field-group">
+                    <label class="field-label" for="webhookUrl">Webhook URL</label>
+                    <input type="url" id="webhookUrl" class="field-input" value="https://webhook.site/unique-id" required>
+                </div>
+                <div class="field-group">
+                    <label class="field-label" for="redirectUrl">Redirect URL</label>
+                    <input type="url" id="redirectUrl" class="field-input" value="{{ base_url or 'http://localhost:8000' }}" required>
+                </div>
+                <div id="fallbackError" class="inline-alert" role="alert"></div>
+                <button type="submit" class="btn-primary">Create invoice</button>
+            </form>
+            <div id="resultBox" style="display: none; margin-top: 20px;">
+                <a href="#" id="checkoutLink" target="_blank" class="btn-secondary">Open hosted checkout</a>
+            </div>
+        </main>
     </div>
-
-    <script src="/static/js/i18n.js"></script>
     <script>
-        function copyUrl() {
-            const urlText = document.getElementById('urlBox').innerText;
-            navigator.clipboard.writeText(urlText).then(() => {
-                const originalBorder = document.getElementById('urlBox').style.borderColor;
-                document.getElementById('urlBox').style.borderColor = '#48bb78';
-                setTimeout(() => {
-                    document.getElementById('urlBox').style.borderColor = originalBorder;
-                }, 500);
-            });
-        }
-
-        const form = document.getElementById('testForm');
-        const submitBtn = document.getElementById('submitBtn');
-        const resultContainer = document.getElementById('resultContainer');
-        const paymentLinkBtn = document.getElementById('paymentLinkBtn');
-        const urlBox = document.getElementById('urlBox');
-
-        form.addEventListener('submit', async (e) => {
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-
-            submitBtn.style.opacity = '0.7';
-            submitBtn.disabled = true;
-
-            const amount = parseInt(document.getElementById('amount').value);
-            const reference = document.getElementById('reference').value;
-            const redirectUrl = document.getElementById('redirectUrl').value;
-
+            const errBox = document.getElementById('fallbackError');
+            errBox.classList.remove('visible');
             try {
                 const res = await fetch('/api/create-invoice', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        amount: amount,
-                        reference: reference,
-                        webhook_url: document.getElementById('webhookUrl').value,
-                        redirect_url: redirectUrl
+                        amount: parseInt(document.getElementById('amount').value, 10),
+                        reference: document.getElementById('reference').value,
+                        webhookUrl: document.getElementById('webhookUrl').value,
+                        redirectUrl: document.getElementById('redirectUrl').value
                     })
                 });
-
-                if (!res.ok) throw new Error('API Error');
-
                 const data = await res.json();
-
-                resultContainer.style.display = 'block';
-                paymentLinkBtn.href = data.pageUrl;
-                urlBox.innerText = data.pageUrl;
-
-            } catch (error) {
-                alert('Error creating invoice');
-            } finally {
-                submitBtn.style.opacity = '1';
-                submitBtn.disabled = false;
+                if (!res.ok) throw new Error(data.detail || 'API Error');
+                document.getElementById('checkoutLink').href = data.pageUrl;
+                document.getElementById('resultBox').style.display = 'block';
+            } catch (err) {
+                errBox.textContent = err.message || 'Error creating invoice';
+                errBox.classList.add('visible');
             }
         });
     </script>
