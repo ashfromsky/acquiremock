@@ -9,7 +9,7 @@ def to_camel(snake_str: str) -> str:
 
 
 class CreateInvoiceRequest(BaseModel):
-    amount: int = Field(..., description="Сума платежу в копійках/центах.")
+    amount: int = Field(..., gt=0, description="Сума платежу в копійках/центах.")
     reference: str = Field(..., description="Унікальний референс замовлення.")
     webhook_url: str = Field(..., description="URL для відправки webhook-сповіщення.")
     redirect_url: str = Field(..., description="URL для перенаправлення клієнта після оплати.")
