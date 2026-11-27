@@ -1,38 +1,71 @@
-﻿version: '3.8'
+﻿x-app-env: &app-env
+  APP_ENV: ${APP_ENV:-production}
+  DEBUG: ${DEBUG:-false}
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-acquiremock}:${POSTGRES_PASSWORD:-acquiremock}@db:5432/${POSTGRES_DB:-acquiremock_db}
+  WEBHOOK_SECRET: ${WEBHOOK_SECRET:?WEBHOOK_SECRET must be set to a strong 32+ character secret}
+  SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET must be set to a strong 32+ character secret distinct from WEBHOOK_SECRET}
+  ADMIN_USERNAME: ${ADMIN_USERNAME:?ADMIN_USERNAME must be set}
+  ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?ADMIN_PASSWORD_HASH must be set (bcrypt hash)}
+  APP_HOST: ${APP_HOST:-http://localhost:8000}
+  PORT: ${PORT:-8000}
+  CURRENCY_CODE: ${CURRENCY_CODE:-USD}
+  CURRENCY_SYMBOL: ${CURRENCY_SYMBOL:-$}
+  PAYMENT_TTL_MINUTES: ${PAYMENT_TTL_MINUTES:-15}
+  ALLOW_LOCAL_WEBHOOKS: ${ALLOW_LOCAL_WEBHOOKS:-false}
+  ENABLE_EMBEDDED_WORKER: "false"
+  WEBHOOK_MAX_ATTEMPTS: ${WEBHOOK_MAX_ATTEMPTS:-5}
+  WEBHOOK_TIMEOUT_SECONDS: ${WEBHOOK_TIMEOUT_SECONDS:-10}
+  HTTPS_ONLY: ${HTTPS_ONLY:-false}
 
 services:
-  app:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://acquiremock:acquiremock@db:5432/acquiremock_db
-      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-change_this_secret_key_min_32_characters}
-      - BASE_URL=${BASE_URL:-http://localhost:8000}
-      - CURRENCY_CODE=${CURRENCY_CODE:-USD}
-      - CURRENCY_SYMBOL=${CURRENCY_SYMBOL:-$}
-      - SMTP_HOST=${SMTP_HOST:-}
-      - SMTP_PORT=${SMTP_PORT:-}
-      - SMTP_USER=${SMTP_USER:-}
-      - SMTP_PASS=${SMTP_PASS:-}
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-
   db:
     image: postgres:15-alpine
     environment:
-      - POSTGRES_USER=acquiremock
-      - POSTGRES_PASSWORD=acquiremock
-      - POSTGRES_DB=acquiremock_db
+      POSTGRES_USER: ${POSTGRES_USER:-acquiremock}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-acquiremock}
+      POSTGRES_DB: ${POSTGRES_DB:-acquiremock_db}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U acquiremock -d acquiremock_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-acquiremock} -d ${POSTGRES_DB:-acquiremock_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  migrate:
+    build: .
+    command: ["alembic", "upgrade", "head"]
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+    restart: "no"
+
+  app:
+    build: .
+    ports:
+      - "${PORT:-8000}:8000"
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: ["python", "-m", "app.worker"]
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      disable: true
     restart: unless-stopped
 
 volumes:

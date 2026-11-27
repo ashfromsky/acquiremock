@@ -28,6 +28,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 COPY --from=frontend-builder /src/frontend/dist /app/frontend/dist
 
-EXPOSE ${PORT}
+RUN groupadd --system appuser && useradd --system --gid appuser --no-create-home appuser && chown -R appuser:appuser /app
 
-CMD gunicorn app.main:app --workers ${WORKERS:-1} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT}
+USER appuser
+
+EXPOSE ${PORT:-8000}
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"PORT\", \"8000\")}/health')"
+
+CMD ["sh", "-c", "exec gunicorn app.main:app --workers ${WORKERS:-2} --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-8000}"]

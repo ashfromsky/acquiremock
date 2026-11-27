@@ -1,41 +1,121 @@
-﻿name: Run Tests
+﻿name: AcquireMock CI
 
 on:
   push:
-    branches: [ "main", "master", "development" ]
+    branches: [master, main, development]
   pull_request:
-    branches: [ "main", "master", "development" ]
+    branches: [master, main, development]
+
+env:
+  TESTING: "true"
+  WEBHOOK_SECRET: "ci-webhook-secret-key-at-least-32-characters-long"
+  SESSION_SECRET: "ci-session-secret-key-at-least-32-characters-long"
+  ADMIN_USERNAME: "admin"
+  ADMIN_PASSWORD_HASH: '$2b$12$i/bda5DB0i74vSubiIswMe6rBh9Ft4wVxieTuJbTo.PgMYHvzovC.'
 
 jobs:
-  test:
+  backend:
+    name: Backend Tests & Migrations (SQLite)
     runs-on: ubuntu-latest
-    timeout-minutes: 5
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v5
-      with:
-        python-version: "3.11"
-        cache: 'pip'
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        pip install pytest pytest-asyncio httpx aiosqlite
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest pytest-asyncio aiosqlite httpx
 
-    - name: Run tests with timeout
-      run: |
-        export TESTING=true
-        export DATABASE_URL=sqlite+aiosqlite:///:memory:
-        export WEBHOOK_SECRET=ci_test_webhook_secret_key_min_32_chars
-        timeout 60s pytest -v --tb=short || exit_code=$?
-        if [ $exit_code -eq 124 ]; then
-          echo "::error::Tests timed out after 60 seconds"
-          echo "This indicates background tasks are not properly disabled"
-          exit 1
-        fi
-        exit ${exit_code:-0}
+      - name: Verify Alembic migration upgrade
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///./ci_migration_test.db
+        run: |
+          alembic upgrade head
+          rm -f ci_migration_test.db
+
+      - name: Run pytest suite
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///:memory:
+        run: pytest -v
+
+  backend-postgres:
+    name: Backend Integration (PostgreSQL 15)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: acquiremock
+          POSTGRES_PASSWORD: acquiremock_ci_password
+          POSTGRES_DB: acquiremock_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U acquiremock -d acquiremock_test"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pytest pytest-asyncio asyncpg httpx
+
+      - name: Run Alembic migrations on PostgreSQL
+        env:
+          DATABASE_URL: postgresql+asyncpg://acquiremock:acquiremock_ci_password@localhost:5432/acquiremock_test
+        run: alembic upgrade head
+
+      - name: Run PostgreSQL integration tests
+        env:
+          DATABASE_URL: sqlite+aiosqlite:///:memory:
+          POSTGRES_TEST_URL: postgresql+asyncpg://acquiremock:acquiremock_ci_password@localhost:5432/acquiremock_test
+        run: pytest -v tests/test_postgres_integration.py
+
+  frontend:
+    name: Frontend Typecheck, Tests & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install, typecheck, test, and build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run typecheck
+          npm test
+          npm run build
+
+  docker:
+    name: Docker Image Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t acquiremock:ci .
