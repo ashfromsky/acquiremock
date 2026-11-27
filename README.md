@@ -116,33 +116,6 @@ AcquireMock runs on SQLite (`sqlite+aiosqlite`) or PostgreSQL (`postgresql+async
   <img src="assets/identity/readme/architecture.svg" alt="Section 03: Architecture" width="100%" />
 </p>
 
-### Payment & Webhook Flow
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant M as Merchant Backend
-    participant A as AcquireMock API
-    participant B as Buyer Browser
-    participant W as Merchant Webhook
-
-    M->>A: POST /api/create-invoice (amount, reference, webhookUrl, redirectUrl)
-    A-->>M: 200 OK { pageUrl }
-    M->>B: Redirect to pageUrl (/checkout/{payment_id})
-    B->>A: GET /checkout/{payment_id}
-    A-->>B: Checkout HTML + Strict csrf_token cookie
-    B->>A: POST /api/pay/{payment_id} (card + email + csrf_token)
-    alt Card == 4444 4444 4444 4444
-        A-->>B: 303 Redirect to /otp/{payment_id} (OTP sent via SMTP or stdout)
-        B->>A: POST /otp/verify/{payment_id} (4-digit OTP)
-        A-->>B: 303 Redirect to /success/{payment_id} (+ user_session cookie)
-        A->>W: POST webhookUrl (sorted JSON + X-Signature HMAC-SHA256)
-        W-->>A: 2xx OK (logged in webhook_logs)
-    else Any other card
-        A-->>B: 402 INSUFFICIENT_FUNDS
-    end
-```
-
 ### Repository Structure
 
 ```text
