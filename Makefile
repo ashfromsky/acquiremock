@@ -1,4 +1,4 @@
-﻿.PHONY: help setup install test run docker-up docker-down docker-logs clean lint format db-reset
+﻿.PHONY: help setup install test run docker-up docker-down docker-logs clean lint format db-reset frontend-install frontend-dev frontend-build
 
 # Default target
 .DEFAULT_GOAL := help
@@ -44,6 +44,15 @@ run: ## Run the application locally
 run-prod: ## Run in production mode (no reload)
 	@echo "$(CYAN)Starting AcquireMock (production)...$(NC)"
 	gunicorn app.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+
+frontend-install: ## Install frontend dependencies
+	cd frontend && npm ci
+
+frontend-dev: ## Run Vite dev server for React frontend
+	cd frontend && npm run dev
+
+frontend-build: ## Typecheck and build React production bundle
+	cd frontend && npm run typecheck && npm run build
 
 # Docker commands
 docker-up: ## Start with Docker Compose
