@@ -10,6 +10,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
 
+import app.core.config as config
 from app.database.core.session import engine
 from app.services.background_tasks import start_background_tasks
 from app.models.errors import PaymentError
@@ -46,14 +47,23 @@ async def lifespan(app: FastAPI):
         await conn.execute(text("SELECT 1"))
     logger.info("Database connection verified.")
 
-    if not TESTING:
-        asyncio.create_task(start_background_tasks())
-        logger.info("Background tasks started")
+    stop_event = asyncio.Event()
+    worker_task = None
+    if not TESTING and config.ENABLE_EMBEDDED_WORKER:
+        worker_task = asyncio.create_task(start_background_tasks(stop_event))
+        logger.info("Embedded background worker started")
     else:
-        logger.info("Skipping background tasks (testing mode)")
+        logger.info("Embedded background worker disabled (use python -m app.worker)")
 
-    yield
-    logger.info("Shutting down application...")
+    try:
+        yield
+    finally:
+        if worker_task is not None:
+            stop_event.set()
+            worker_task.cancel()
+            await asyncio.gather(worker_task, return_exceptions=True)
+        await engine.dispose()
+        logger.info("Shutting down application...")
 
 
 app = FastAPI(

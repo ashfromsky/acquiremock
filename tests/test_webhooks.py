@@ -104,10 +104,27 @@ async def test_dispatch_webhook_success_and_failure(
         return httpx.Response(500, text="server error")
 
     monkeypatch.setattr(httpx.AsyncClient, "post", fake_post_fail)
-    ok2 = await dispatch_webhook("pay-wh-1")
+    ok_skip = await dispatch_webhook("pay-wh-1")
+    assert ok_skip is True
+    db_session.expire_all()
+    still_one = await get_payment(db_session, "pay-wh-1")
+    assert still_one.webhook_attempts == 1
+
+    payment_fail = Payment(
+        id="pay-wh-2",
+        amount=3000,
+        reference="ORD-WH-2",
+        webhook_url="https://merchant.example.com/webhook",
+        redirect_url="https://merchant.example.com/ok",
+        status="paid",
+        card_mask="**** 4444",
+    )
+    await create_payment(db_session, payment_fail)
+
+    ok2 = await dispatch_webhook("pay-wh-2")
     assert ok2 is False
 
     db_session.expire_all()
-    updated2 = await get_payment(db_session, "pay-wh-1")
+    updated2 = await get_payment(db_session, "pay-wh-2")
     assert updated2.webhook_status == "failed"
-    assert updated2.webhook_attempts == 2
+    assert updated2.webhook_attempts == 1

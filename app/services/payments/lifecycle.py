@@ -126,6 +126,7 @@ async def finalize_successful_payment(
                 card_mask=card_mask,
                 idempotency_key=idempotency_key,
                 webhook_status="pending",
+                webhook_next_attempt_at=now,
             )
         )
         result = await db.execute(stmt)

@@ -21,7 +21,7 @@ def mock_outbound_calls(monkeypatch):
     async def fake_dispatch_webhook(payment_id: str, timeout: int = 10) -> bool:
         return True
 
-    monkeypatch.setattr("app.api.routes.payments.send_otp_email", fake_send_otp)
+    monkeypatch.setattr("app.services.smtp_service.send_otp_email", fake_send_otp)
     monkeypatch.setattr("app.api.routes.pages.send_otp_email", fake_send_otp)
     monkeypatch.setattr("app.services.smtp_service.send_receipt_email", fake_send_receipt)
     monkeypatch.setattr("app.services.webhook_service.dispatch_webhook", fake_dispatch_webhook)

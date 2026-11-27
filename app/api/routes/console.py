@@ -16,6 +16,10 @@ from app.models.main_models import AdminSession, Payment, PaymentStatus, Webhook
 from app.security.admin_auth import require_admin, require_admin_csrf
 from app.services.smtp_service import EMAIL_ENABLED
 from app.services.webhook_service import send_webhook_with_retry
+from app.services.webhooks.retry import (
+    can_manually_retry_webhook,
+    get_webhook_delivery_state,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +40,17 @@ def _serialize_payment(payment: Payment) -> dict:
         "webhook_url": payment.webhook_url,
         "redirect_url": payment.redirect_url,
         "webhook_status": payment.webhook_status,
+        "webhook_delivery_state": get_webhook_delivery_state(payment),
+        "webhook_can_retry": can_manually_retry_webhook(payment),
         "webhook_attempts": payment.webhook_attempts,
         "webhook_last_attempt": (
             payment.webhook_last_attempt.isoformat()
             if payment.webhook_last_attempt
+            else None
+        ),
+        "webhook_next_attempt_at": (
+            payment.webhook_next_attempt_at.isoformat()
+            if payment.webhook_next_attempt_at
             else None
         ),
         "error_code": payment.error_code,
@@ -132,6 +143,32 @@ async def get_console_overview(db: AsyncSession = Depends(get_db)):
         else None
     )
 
+    scheduled_retries = int(
+        (
+            await db.execute(
+                select(func.count(Payment.id)).where(
+                    Payment.status == PaymentStatus.PAID.value,
+                    Payment.webhook_status == "failed",
+                    Payment.webhook_attempts < config.WEBHOOK_MAX_ATTEMPTS,
+                    Payment.webhook_next_attempt_at.is_not(None),
+                )
+            )
+        ).scalar()
+        or 0
+    )
+    exhausted_webhooks = int(
+        (
+            await db.execute(
+                select(func.count(Payment.id)).where(
+                    Payment.status == PaymentStatus.PAID.value,
+                    Payment.webhook_status != "success",
+                    Payment.webhook_attempts >= config.WEBHOOK_MAX_ATTEMPTS,
+                )
+            )
+        ).scalar()
+        or 0
+    )
+
     recent_result = await db.execute(
         select(Payment).order_by(Payment.created_at.desc()).limit(8)
     )
@@ -152,6 +189,8 @@ async def get_console_overview(db: AsyncSession = Depends(get_db)):
             "succeeded": succeeded_webhooks,
             "failed": failed_webhooks,
             "success_rate": success_rate,
+            "scheduled_retries": scheduled_retries,
+            "exhausted": exhausted_webhooks,
         },
         "recent_payments": recent_payments,
     }
@@ -319,6 +358,13 @@ async def retry_console_webhook(
         "success": success,
         "payment_id": payment.id,
         "webhook_status": payment.webhook_status,
+        "webhook_delivery_state": get_webhook_delivery_state(payment),
+        "webhook_can_retry": can_manually_retry_webhook(payment),
         "webhook_attempts": payment.webhook_attempts,
+        "webhook_next_attempt_at": (
+            payment.webhook_next_attempt_at.isoformat()
+            if payment.webhook_next_attempt_at
+            else None
+        ),
         "latest_log": _serialize_webhook_log(latest_log) if latest_log else None,
     }
