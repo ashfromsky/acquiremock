@@ -39,11 +39,11 @@ install-dev: ## Install development dependencies
 # Running the application
 run: ## Run the application locally
 	@echo "$(CYAN)Starting AcquireMock...$(NC)"
-	uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+	uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 run-prod: ## Run in production mode (no reload)
 	@echo "$(CYAN)Starting AcquireMock (production)...$(NC)"
-	gunicorn main:app --workers 4 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+	gunicorn app.main:app --workers 1 --worker-class uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
 
 # Docker commands
 docker-up: ## Start with Docker Compose

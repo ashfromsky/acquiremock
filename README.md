@@ -48,7 +48,7 @@ cp .env.example .env
 nano .env
 
 # Start application
-uvicorn main:app --port 8000 --reload
+uvicorn app.main:app --port 8000 --reload
 ```
 
 ---
@@ -171,7 +171,7 @@ from fastapi import Request, HTTPException
 
 def verify_webhook(payload: dict, signature: str, secret: str) -> bool:
     """Verify HMAC-SHA256 signature"""
-    message = json.dumps(payload, sort_keys=True)
+    message = json.dumps(payload, sort_keys=True, separators=(",", ":"))
     expected = hmac.new(
         secret.encode(),
         message.encode(),
