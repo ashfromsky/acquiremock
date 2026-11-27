@@ -1,0 +1,45 @@
+.block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: var(--space-8);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+
+.errorBlock {
+  border-color: rgba(158, 42, 43, 0.25);
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  max-width: 56ch;
+}
+
+.action {
+  margin-top: var(--space-2);
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--brand-coral-deep);
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
