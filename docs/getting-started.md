@@ -1,282 +1,149 @@
 ﻿# Getting Started with AcquireMock
 
-This guide will help you integrate AcquireMock into your application in under 10 minutes.
+This guide walks through setting up AcquireMock v2.0 locally or with Docker Compose, applying Alembic database migrations, and creating your first payment.
 
-## Prerequisites
+## Option 1: Docker Compose (Recommended)
 
-- Python 3.11+ or Docker
-- Basic understanding of REST APIs
-- A webhook endpoint (optional, can use webhook.site for testing)
+Docker Compose starts four coordinated services: `db` (PostgreSQL 15), `migrate` (`alembic upgrade head`), `app` (Gunicorn/Uvicorn API + console UI), and `worker` (`python -m app.worker`).
 
-## Quick Start
-
-### Option 1: Using Docker (Recommended)
+### 1. Clone and configure secrets
 
 ```bash
-# Clone the repository
-git clone https://github.com/illusiOxd/acquiremock.git
+git clone https://github.com/ashfromsky/acquiremock.git
 cd acquiremock
-
-# Start the service
-docker-compose up -d
-
-# Check if it's running
-curl http://localhost:8000/health
-```
-
-### Option 2: Manual Installation
-
-```bash
-# Clone and setup
-git clone https://github.com/illusiOxd/acquiremock.git
-cd acquiremock
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure environment
 cp .env.example .env
-nano .env  # Edit your settings
-
-# Run database migrations
-# (Tables are created automatically on first run)
-
-# Start the server
-uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+Generate two distinct strong secrets (>= 32 characters) and an administrator bcrypt password hash:
+
+```bash
+python3 -c "import secrets; print('WEBHOOK_SECRET=' + secrets.token_urlsafe(32)); print('SESSION_SECRET=' + secrets.token_urlsafe(32))"
+python3 -c "import bcrypt; print('ADMIN_PASSWORD_HASH=\'' + bcrypt.hashpw(b'your-strong-password', bcrypt.gensalt(12)).decode() + '\'')"
+```
+
+Set `WEBHOOK_SECRET`, `SESSION_SECRET`, `ADMIN_USERNAME`, and `ADMIN_PASSWORD_HASH` in `.env`. Docker Compose fails closed if any of these four variables is missing.
+
+### 2. Start the stack
+
+```bash
+docker compose up --build -d
+```
+
+Verify service health:
+
+```bash
+curl -s http://localhost:8000/health
+```
+
+Expected response:
+
+```json
+{"status": "ok"}
+```
+
+To sign in to the Developer Console, visit `http://localhost:8000/app/login` and enter `ADMIN_USERNAME` and your plain password.
+
+---
+
+## Option 2: Local Python + Node.js Setup
+
+### Prerequisites
+
+- Python 3.12+
+- Node.js 22+
+- SQLite (default) or PostgreSQL 15+
+
+### 1. Install backend dependencies
+
+```bash
+git clone https://github.com/ashfromsky/acquiremock.git
+cd acquiremock
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+### 2. Configure environment variables
+
+```bash
+cp .env.example .env
+```
+
+Edit `.env` and ensure `WEBHOOK_SECRET`, `SESSION_SECRET`, `ADMIN_USERNAME`, and `ADMIN_PASSWORD_HASH` are configured. Note that `ALLOW_LOCAL_WEBHOOKS` defaults to `false`; set `ALLOW_LOCAL_WEBHOOKS=true` only if you want local webhook tests to target `localhost` or private IP addresses.
+
+### 3. Build frontend assets
+
+```bash
+cd frontend
+npm ci
+npm run build
+cd ..
+```
+
+### 4. Apply database migrations
+
+AcquireMock v2.0 uses Alembic for schema management and does **not** create tables automatically on startup:
+
+```bash
+.venv/bin/alembic upgrade head
+```
+
+### 5. Run the API server and worker
+
+Start the FastAPI application:
+
+```bash
+.venv/bin/uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+Start the dedicated background worker in a second terminal for automatic payment expiration and webhook retries:
+
+```bash
+.venv/bin/python -m app.worker
+```
+
+For single-process local development only, you may instead set `ENABLE_EMBEDDED_WORKER=true` in `.env`.
+
+---
 
 ## Creating Your First Payment
 
-### 1. Create a Payment Invoice
+AcquireMock uses integer minor currency units for `amount` (for example, `25000` equals `$250.00` USD):
 
 ```bash
 curl -X POST http://localhost:8000/api/create-invoice \
   -H "Content-Type: application/json" \
   -d '{
-    "amount": 10000,
-    "reference": "ORDER-123",
-    "webhookUrl": "https://webhook.site/your-unique-id",
-    "redirectUrl": "https://yoursite.com/success"
+    "amount": 25000,
+    "reference": "ORDER-1001",
+    "webhook_url": "https://example.com/webhooks/acquiremock",
+    "redirect_url": "https://example.com/checkout/complete"
   }'
 ```
 
-**Response:**
-```json
-{
-  "pageUrl": "http://localhost:8000/checkout/abc-123-def"
-}
-```
-
-### 2. Redirect User to Payment Page
-
-Open the `pageUrl` in a browser. The user will see a professional checkout page.
-
-### 3. Test Payment
-
-Use these test credentials:
-
-| Field | Value |
-|-------|-------|
-| Card Number | `4444 4444 4444 4444` |
-| Expiry | Any future date (e.g., `12/25`) |
-| CVV | Any 3 digits (e.g., `123`) |
-
-**Note:** Any other card number will result in "Insufficient Funds" error.
-
-### 4. OTP Verification
-
-After submitting the card, an OTP code will be sent:
-- **If SMTP is configured:** Code sent to email
-- **If SMTP is NOT configured:** Code printed to console logs
-
-Check your terminal for output like:
-```
-🔐 OTP Code for user@example.com: 1234
-```
-
-### 5. Receive Webhook Notification
-
-After successful payment, AcquireMock will send a webhook to your `webhookUrl`:
+Response:
 
 ```json
 {
-  "payment_id": "abc-123-def",
-  "reference": "ORDER-123",
-  "amount": 10000,
-  "status": "paid",
-  "timestamp": "2025-01-15T10:30:00Z",
-  "card_mask": "**** 4444"
+  "pageUrl": "http://localhost:8000/checkout/<payment_id>"
 }
 ```
 
-**Headers:**
-```
-X-Signature: hmac-sha256-signature
-X-Payment-ID: abc-123-def
-Content-Type: application/json
-```
+Open `pageUrl` in your browser to test the checkout UI, card entry, OTP verification (`waiting_for_otp` -> `paid`), and webhook delivery.
 
-## Verifying Webhook Signatures
+### Test Cards
 
-Always verify webhook signatures to ensure requests come from AcquireMock:
-
-```python
-import hmac
-import hashlib
-import json
-
-def verify_webhook(payload: dict, signature: str, secret: str) -> bool:
-    message = json.dumps(payload, sort_keys=True)
-    expected = hmac.new(
-        secret.encode(),
-        message.encode(),
-        hashlib.sha256
-    ).hexdigest()
-    return hmac.compare_digest(expected, signature)
-
-# In your webhook handler
-@app.post("/webhook")
-async def payment_webhook(request: Request):
-    signature = request.headers.get("X-Signature")
-    payload = await request.json()
-    
-    if not verify_webhook(payload, signature, WEBHOOK_SECRET):
-        return {"error": "Invalid signature"}, 403
-    
-    # Process payment
-    if payload["status"] == "paid":
-        # Update order status in your database
-        pass
-    
-    return {"status": "ok"}
-```
-
-## Configuration
-
-### Environment Variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `DATABASE_URL` | Yes | - | Database connection string |
-| `WEBHOOK_SECRET` | Yes | - | Secret key for webhook signatures (min 32 chars) |
-| `BASE_URL` | Yes | `http://localhost:8000` | Your application base URL |
-| `CURRENCY_CODE` | No | `USD` | Currency code (USD, EUR, UAH, etc.) |
-| `CURRENCY_SYMBOL` | No | `$` | Currency symbol |
-| `SMTP_HOST` | No | - | SMTP server for emails |
-| `SMTP_PORT` | No | - | SMTP port (usually 587) |
-| `SMTP_USER` | No | - | SMTP username |
-| `SMTP_PASS` | No | - | SMTP password |
-
-### Generating Webhook Secret
-
-```bash
-# Linux/macOS
-openssl rand -hex 32
-
-# Python
-python -c "import secrets; print(secrets.token_hex(32))"
-```
-
-## Testing Interactive UI
-
-AcquireMock includes a built-in test page:
-
-1. Visit `http://localhost:8000/test`
-2. Fill in the form with test data
-3. Click "Create Invoice"
-4. You'll get a payment link to test the full flow
-
-## Email Configuration
-
-### Gmail Example
-
-1. Enable 2-Factor Authentication in your Google Account
-2. Generate an App Password: https://myaccount.google.com/apppasswords
-3. Add to `.env`:
-
-```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-16-char-app-password
-```
-
-### Testing Without Email
-
-If you don't configure SMTP, OTP codes will be printed to console:
-
-```bash
-# Watch the logs
-docker-compose logs -f app
-
-# Or if running manually
-# Just look at your terminal output
-```
-
-## Payment Flow Diagram
-
-```
-User → Your Site → AcquireMock API
-                        ↓
-                  Create Invoice
-                        ↓
-                  Return pageUrl
-                        ↓
-User → Payment Page → Enter Card
-                        ↓
-                    Send OTP
-                        ↓
-                  Verify OTP
-                        ↓
-                Update Status
-                        ↓
-              ┌─────────┴─────────┐
-              ↓                   ↓
-        Send Webhook         Redirect User
-              ↓                   ↓
-        Your Server          Success Page
-```
-
-## Common Issues
-
-### "Connection Refused" Error
-
-Make sure the server is running:
-```bash
-curl http://localhost:8000/health
-```
-
-### OTP Not Received
-
-Check if SMTP is configured. If not, check console logs:
-```bash
-docker-compose logs -f app | grep "OTP"
-```
-
-### Webhook Not Delivered
-
-- Check your webhook URL is publicly accessible
-- Use https://webhook.site for testing
-- Check firewall/network settings
-- Review webhook logs in database table `webhook_logs`
-
-## Next Steps
-
-- [API Reference](./api-reference.md) - Complete API documentation
-- [Webhook Guide](./webhook-guide.md) - Advanced webhook handling
-- [Examples](./examples/) - Integration examples in different languages
-- [Migration Guide](./migration-guide.md) - Moving to production PSP
-
-## Support
-
-- **Issues:** https://github.com/illusiOxd/acquiremock/issues
-- **Discussions:** https://github.com/illusiOxd/acquiremock/discussions
-- **Email:** support@acquiremock.dev (if available)
+| Card Number | Outcome |
+| --- | --- |
+| `4444 4444 4444 4444` (any future expiry, any 3-digit CVV) | Enters `waiting_for_otp`, settles as `paid` after valid OTP |
+| `5555 5555 5555 5555` | Declined with `402 INSUFFICIENT_FUNDS` |
+| Any other valid Luhn number | Enters `waiting_for_otp`, settles as `paid` after valid OTP |
 
 ---
 
-**Ready to integrate?** Check out our [integration examples](./examples/) for your programming language.
+## Next Steps
+
+- [API Reference](./api-reference.md)
+- [Webhook Integration Guide](./webhook-guide.md)
+- [Issues](https://github.com/ashfromsky/acquiremock/issues)
+- [Discussions](https://github.com/ashfromsky/acquiremock/discussions)
