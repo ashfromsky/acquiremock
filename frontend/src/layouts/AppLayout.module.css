@@ -106,17 +106,46 @@
   gap: var(--space-2);
 }
 
-.accountLink {
+.adminSessionBox {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.adminIdentity {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: var(--space-2);
-  border-radius: var(--radius-md);
-  transition: background-color var(--duration-fast) var(--ease-out);
+  min-width: 0;
 }
 
-.accountLink:hover {
-  background: var(--bg-subtle);
+.logoutBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.logoutBtn:hover:not(:disabled) {
+  background: var(--bg-canvas);
+}
+
+.logoutBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .accountLabel {

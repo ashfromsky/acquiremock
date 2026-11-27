@@ -47,6 +47,7 @@ export function SettingsPage() {
   const deleteCardMutation = useDeleteSavedCard();
 
   const symbol = configQuery.data?.currency_symbol ?? '$';
+  const currencyCode = configQuery.data?.currency_code ?? 'USD';
 
   const emailForm = useForm<SendCodeFormValues>({
     resolver: zodResolver(sendCodeSchema),
@@ -195,7 +196,7 @@ export function SettingsPage() {
                           </div>
                         </div>
                         <span className={`${styles.opAmount} mono-num`}>
-                          {formatAmount(op.amount, symbol)}
+                          {op.formatted_amount || formatAmount(op.amount, currencyCode, symbol)}
                         </span>
                       </div>
                     ))}

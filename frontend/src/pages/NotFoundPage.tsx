@@ -1,6 +1,5 @@
-import { Link } from 'react-router-dom';
 import { PublicLayout } from '../layouts/PublicLayout';
-import { Button } from '../components/ui/Button';
+import { ButtonLink } from '../components/ui/Button';
 import styles from './NotFoundPage.module.css';
 
 export function NotFoundPage() {
@@ -14,12 +13,12 @@ export function NotFoundPage() {
             The route you requested does not exist in AcquireMock. Return to the homepage or open the developer workspace.
           </p>
           <div className={styles.actions}>
-            <Link to="/">
-              <Button variant="primary">Back to homepage</Button>
-            </Link>
-            <Link to="/app/overview">
-              <Button variant="secondary">Open workspace</Button>
-            </Link>
+            <ButtonLink to="/" variant="primary">
+              Back to homepage
+            </ButtonLink>
+            <ButtonLink to="/app/overview" variant="secondary">
+              Open workspace
+            </ButtonLink>
           </div>
         </div>
       </section>

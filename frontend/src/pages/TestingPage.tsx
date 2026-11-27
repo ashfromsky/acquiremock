@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import { AppLayout } from '../layouts/AppLayout';
-import { Button } from '../components/ui/Button';
+import { AnchorButton, Button, ButtonLink } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { CopyButton } from '../components/ui/CopyButton';
 import { createInvoice } from '../api/payments';
@@ -14,6 +13,7 @@ import { useConsoleConfig } from '../hooks/useConsoleData';
 import { createInvoiceSchema, type CreateInvoiceFormValues } from '../schemas/forms';
 import { useToastStore } from '../store/toastStore';
 import { extractPaymentIdFromUrl, formatAmount, getRuntimeBaseUrl } from '../utils/format';
+import { handleTabListKeyDown } from '../utils/tablist';
 import styles from './TestingPage.module.css';
 
 interface SessionInvoiceRecord {
@@ -55,6 +55,7 @@ export function TestingPage() {
   const [history, setHistory] = useState<SessionInvoiceRecord[]>(loadSessionInvoices);
 
   const symbol = configQuery.data?.currency_symbol ?? '$';
+  const currencyCode = configQuery.data?.currency_code ?? 'USD';
   const allowLocalWebhooks = configQuery.data?.allow_local_webhooks ?? false;
 
   const {
@@ -163,7 +164,7 @@ export function TestingPage() {
                     className={styles.presetBtn}
                     onClick={() => setValue('amount', preset, { shouldValidate: true })}
                   >
-                    {formatAmount(preset, symbol)}
+                    {formatAmount(preset, currencyCode, symbol)}
                   </button>
                 ))}
               </div>
@@ -217,18 +218,26 @@ export function TestingPage() {
                 <button
                   type="button"
                   role="tab"
+                  tabIndex={previewMode === 'json' ? 0 : -1}
                   aria-selected={previewMode === 'json'}
                   className={`${styles.tab} ${previewMode === 'json' ? styles.tabActive : ''}`}
                   onClick={() => setPreviewMode('json')}
+                  onKeyDown={(e) =>
+                    handleTabListKeyDown(e, ['json', 'curl'] as const, previewMode, setPreviewMode)
+                  }
                 >
                   Request JSON
                 </button>
                 <button
                   type="button"
                   role="tab"
+                  tabIndex={previewMode === 'curl' ? 0 : -1}
                   aria-selected={previewMode === 'curl'}
                   className={`${styles.tab} ${previewMode === 'curl' ? styles.tabActive : ''}`}
                   onClick={() => setPreviewMode('curl')}
+                  onKeyDown={(e) =>
+                    handleTabListKeyDown(e, ['json', 'curl'] as const, previewMode, setPreviewMode)
+                  }
                 >
                   cURL
                 </button>
@@ -253,18 +262,24 @@ export function TestingPage() {
                 </div>
 
                 <div className={styles.resultActions}>
-                  <a href={lastResult.pageUrl} target="_blank" rel="noreferrer">
-                    <Button variant="coral" size="sm">
-                      <span>Open hosted checkout</span>
-                      <ExternalLink size={14} strokeWidth={1.75} />
-                    </Button>
-                  </a>
+                  <AnchorButton
+                    href={lastResult.pageUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    variant="coral"
+                    size="sm"
+                  >
+                    <span>Open hosted checkout</span>
+                    <ExternalLink size={14} strokeWidth={1.75} />
+                  </AnchorButton>
                   {lastResult.paymentId ? (
-                    <Link to={`/app/payments/${lastResult.paymentId}`}>
-                      <Button variant="secondary" size="sm">
-                        Inspect payment record
-                      </Button>
-                    </Link>
+                    <ButtonLink
+                      to={`/app/payments/${lastResult.paymentId}`}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      Inspect payment record
+                    </ButtonLink>
                   ) : null}
                 </div>
               </div>
@@ -300,23 +315,29 @@ export function TestingPage() {
                 <div className={styles.historyMeta}>
                   <span className={styles.historyRef}>{item.reference}</span>
                   <span className={`${styles.historyAmount} mono-num`}>
-                    {formatAmount(item.amount, symbol)}
+                    {formatAmount(item.amount, currencyCode, symbol)}
                   </span>
                   <span className={styles.historyTime}>{item.createdAt}</span>
                 </div>
                 <div className={styles.historyActions}>
                   <CopyButton value={item.pageUrl} label="Copy URL" compact />
-                  <a href={item.pageUrl} target="_blank" rel="noreferrer">
-                    <Button variant="secondary" size="sm">
-                      Checkout
-                    </Button>
-                  </a>
+                  <AnchorButton
+                    href={item.pageUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    variant="secondary"
+                    size="sm"
+                  >
+                    Checkout
+                  </AnchorButton>
                   {item.paymentId ? (
-                    <Link to={`/app/payments/${item.paymentId}`}>
-                      <Button variant="ghost" size="sm">
-                        Inspect
-                      </Button>
-                    </Link>
+                    <ButtonLink
+                      to={`/app/payments/${item.paymentId}`}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      Inspect
+                    </ButtonLink>
                   ) : null}
                 </div>
               </div>

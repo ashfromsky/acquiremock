@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { PublicLayout } from '../layouts/PublicLayout';
-import { Button } from '../components/ui/Button';
+import { ButtonLink } from '../components/ui/Button';
 import { CopyButton } from '../components/ui/CopyButton';
 import { LifecycleStage } from '../features/homepage/LifecycleStage';
 import { getRuntimeBaseUrl } from '../utils/format';
+import { handleTabListKeyDown } from '../utils/tablist';
 import styles from './HomePage.module.css';
 
 type CodeLang = 'curl' | 'python' | 'node';
+const CODE_LANGS: readonly CodeLang[] = ['curl', 'python', 'node'];
 
 const LIFECYCLE_STEPS = [
   {
@@ -32,7 +34,7 @@ const LIFECYCLE_STEPS = [
     index: '04',
     title: 'Signed webhook delivery',
     endpoint: 'POST {webhookUrl}',
-    body: 'AcquireMock dispatches compact sorted JSON signed with HMAC-SHA256 in the X-Signature header, records each attempt in webhook_logs, and retries failed deliveries up to 5 times.',
+    body: 'AcquireMock dispatches compact sorted JSON signed with HMAC-SHA256 in the X-Signature header, records each attempt in webhook_logs, and retries failed deliveries with persisted exponential backoff up to 5 times.',
   },
 ];
 
@@ -42,24 +44,24 @@ const SECURITY_SPECS = [
     detail: 'Serialized with sorted keys and compact separators, verified in constant time via POST /webhooks/verify.',
   },
   {
-    label: 'Signed HttpOnly sessions',
-    detail: 'Returning buyer sessions are HMAC-signed with WEBHOOK_SECRET and stored in HttpOnly SameSite=lax cookies.',
+    label: 'Isolated admin and customer sessions',
+    detail: 'Developer console APIs enforce administrator login and CSRF tokens separately from customer saved-card cookies.',
   },
   {
     label: 'Double-submit CSRF protection',
-    detail: 'Checkout and OTP forms bind a Strict HttpOnly csrf_token cookie to a hidden form field verified via hmac.compare_digest.',
+    detail: 'Checkout, OTP, and console actions verify CSRF tokens in constant time with hmac.compare_digest.',
   },
   {
-    label: 'SSRF and input sanitization',
-    detail: 'Redirect and webhook URLs reject javascript:, file:, link-local metadata, and private IP ranges unless ALLOW_LOCAL_WEBHOOKS=true.',
+    label: 'DNS-pinned SSRF protection',
+    detail: 'Webhook targets resolve and validate all A/AAAA records and pin connections to prevent private IP and DNS rebinding attacks.',
   },
   {
-    label: 'Idempotency-Key deduplication',
-    detail: 'Retrying POST /api/pay/{payment_id} with the same Idempotency-Key replays the existing payment outcome without double processing.',
+    label: 'Scoped Idempotency-Key deduplication',
+    detail: 'Retrying POST /api/pay/{payment_id} with the same key and payload replays the outcome while rejecting cross-payment or mismatched reuse.',
   },
   {
-    label: 'Per-IP rate limiting',
-    detail: 'SlowAPI enforces request caps on invoice creation, payment submission, OTP verification, and authentication endpoints.',
+    label: 'Per-IP and OTP lockout controls',
+    detail: 'SlowAPI rate limits and database-backed 5-attempt OTP lockouts protect payment verification and customer authentication.',
   },
 ];
 
@@ -88,14 +90,23 @@ def verify_acquiremock_signature(payload: dict, signature: str, secret: str) -> 
 
   return `import crypto from "node:crypto";
 
+function sortKeys(value) {
+  if (Array.isArray(value)) return value.map(sortKeys);
+  if (value && typeof value === "object") {
+    return Object.keys(value).sort().reduce((acc, key) => {
+      acc[key] = sortKeys(value[key]);
+      return acc;
+    }, {});
+  }
+  return value;
+}
+
 export function verifyAcquireMockSignature(payload, signature, secret) {
-  const sorted = Object.keys(payload).sort().reduce((acc, key) => {
-    acc[key] = payload[key];
-    return acc;
-  }, {});
-  const message = JSON.stringify(sorted);
+  const message = JSON.stringify(sortKeys(payload));
   const expected = crypto.createHmac("sha256", secret).update(message).digest("hex");
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  const sigBuf = Buffer.from(signature);
+  const expBuf = Buffer.from(expected);
+  return sigBuf.length === expBuf.length && crypto.timingSafeEqual(sigBuf, expBuf);
 }`;
 }
 
@@ -124,12 +135,12 @@ export function HomePage() {
               Simulate hosted card checkout, email OTP verification, saved cards, and HMAC-SHA256 webhooks on your local machine or staging environment without external PSP credentials or real money.
             </p>
             <div className={styles.heroActions}>
-              <Link to="/app/testing">
-                <Button variant="primary">Open payment playground</Button>
-              </Link>
-              <Link to="/app/overview">
-                <Button variant="secondary">Open developer console</Button>
-              </Link>
+              <ButtonLink to="/app/testing" variant="primary">
+                Open payment playground
+              </ButtonLink>
+              <ButtonLink to="/app/overview" variant="secondary">
+                Open developer console
+              </ButtonLink>
             </div>
           </div>
         </div>
@@ -181,23 +192,25 @@ export function HomePage() {
                 Create an invoice from cURL or your backend service, then verify every incoming webhook using your shared WEBHOOK_SECRET.
               </p>
             </div>
-            <Link to="/app/testing">
-              <Button variant="coral">Test payload in playground</Button>
-            </Link>
+            <ButtonLink to="/app/testing" variant="coral">
+              Test payload in playground
+            </ButtonLink>
           </div>
 
           <div className={styles.contrastGrid}>
             <div className={styles.codePanel}>
               <div className={styles.codeBar}>
                 <div className={styles.langTabs} role="tablist" aria-label="Integration language examples">
-                  {(['curl', 'python', 'node'] as CodeLang[]).map((lang) => (
+                  {CODE_LANGS.map((lang) => (
                     <button
                       key={lang}
                       type="button"
                       role="tab"
+                      tabIndex={codeLang === lang ? 0 : -1}
                       aria-selected={codeLang === lang}
                       className={`${styles.langTab} ${codeLang === lang ? styles.langTabActive : ''}`}
                       onClick={() => setCodeLang(lang)}
+                      onKeyDown={(e) => handleTabListKeyDown(e, CODE_LANGS, codeLang, setCodeLang)}
                     >
                       {lang === 'curl' ? 'cURL' : lang === 'python' ? 'Python' : 'Node.js'}
                     </button>

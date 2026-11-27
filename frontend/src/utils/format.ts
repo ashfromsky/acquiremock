@@ -1,8 +1,71 @@
-export function formatAmount(amount: number, symbol = '$'): string {
-  const formatted = new Intl.NumberFormat('en-US', {
-    maximumFractionDigits: 0,
-  }).format(amount);
-  return `${formatted} ${symbol}`;
+const ZERO_DECIMAL_CURRENCIES = new Set([
+  'BIF',
+  'CLP',
+  'DJF',
+  'GNF',
+  'ISK',
+  'JPY',
+  'KMF',
+  'KRW',
+  'PYG',
+  'RWF',
+  'UGX',
+  'VND',
+  'VUV',
+  'XAF',
+  'XOF',
+  'XPF',
+]);
+
+const THREE_DECIMAL_CURRENCIES = new Set([
+  'BHD',
+  'IQD',
+  'JOD',
+  'KWD',
+  'LYD',
+  'OMR',
+  'TND',
+]);
+
+const PREFIX_SYMBOLS = new Set(['$', '£', '€', '¥', '₹', '₩', '₪', '₫']);
+
+export function getCurrencyDecimals(currencyCode = 'USD'): number {
+  const code = currencyCode.trim().toUpperCase();
+  if (ZERO_DECIMAL_CURRENCIES.has(code)) return 0;
+  if (THREE_DECIMAL_CURRENCIES.has(code)) return 3;
+  return 2;
+}
+
+export function formatAmount(
+  amountMinor: number,
+  currencyCode = 'USD',
+  symbol = '$',
+): string {
+  const decimals = getCurrencyDecimals(currencyCode);
+  const integerAmount = Math.trunc(Number.isFinite(amountMinor) ? amountMinor : 0);
+  const sign = integerAmount < 0 ? '-' : '';
+  const absValue = Math.abs(integerAmount);
+
+  let numberStr: string;
+  if (decimals === 0) {
+    numberStr = new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: 0,
+    }).format(absValue);
+  } else {
+    const divisor = 10 ** decimals;
+    const whole = Math.floor(absValue / divisor);
+    const frac = absValue % divisor;
+    const wholeFormatted = new Intl.NumberFormat('en-US', {
+      maximumFractionDigits: 0,
+    }).format(whole);
+    const fracFormatted = String(frac).padStart(decimals, '0');
+    numberStr = `${wholeFormatted}.${fracFormatted}`;
+  }
+
+  if (PREFIX_SYMBOLS.has(symbol)) {
+    return `${sign}${symbol}${numberStr}`;
+  }
+  return `${sign}${numberStr} ${symbol}`.trim();
 }
 
 export function formatDateTime(iso: string | null | undefined): string {

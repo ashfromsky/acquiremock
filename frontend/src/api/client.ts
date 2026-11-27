@@ -1,3 +1,5 @@
+export const ADMIN_UNAUTHORIZED_EVENT = 'acquiremock:admin-unauthorized';
+
 export class ApiError extends Error {
   status: number;
   code: string;
@@ -17,6 +19,21 @@ interface FastApiErrorShape {
   message?: string;
   error?: string;
   payment_id?: string | null;
+}
+
+const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined' || !document.cookie) return null;
+  const prefix = `${name}=`;
+  const parts = document.cookie.split(';');
+  for (const part of parts) {
+    const trimmed = part.trim();
+    if (trimmed.startsWith(prefix)) {
+      return decodeURIComponent(trimmed.slice(prefix.length));
+    }
+  }
+  return null;
 }
 
 function extractErrorMessage(body: unknown, fallbackStatus: number): {
@@ -57,8 +74,17 @@ function extractErrorMessage(body: unknown, fallbackStatus: number): {
 
 export async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
+  const method = (init?.method || 'GET').toUpperCase();
+
   if (init?.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
+  }
+
+  if (MUTATING_METHODS.has(method) && !headers.has('X-CSRF-Token')) {
+    const adminCsrf = getCookie('admin_csrf');
+    if (adminCsrf) {
+      headers.set('X-CSRF-Token', adminCsrf);
+    }
   }
 
   const response = await fetch(url, {
@@ -69,9 +95,18 @@ export async function apiFetch<T>(url: string, init?: RequestInit): Promise<T> {
 
   const contentType = response.headers.get('content-type') || '';
   const isJson = contentType.includes('application/json');
-  const data: unknown = isJson ? await response.json().catch(() => null) : await response.text().catch(() => null);
+  const data: unknown = isJson
+    ? await response.json().catch(() => null)
+    : await response.text().catch(() => null);
 
   if (!response.ok) {
+    if (
+      response.status === 401 &&
+      typeof window !== 'undefined' &&
+      (url.startsWith('/api/console') || url === '/api/admin/logout')
+    ) {
+      window.dispatchEvent(new CustomEvent(ADMIN_UNAUTHORIZED_EVENT));
+    }
     const { message, code, paymentId } = extractErrorMessage(data, response.status);
     throw new ApiError(response.status, message, code, paymentId);
   }

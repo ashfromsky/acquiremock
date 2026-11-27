@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { AppLayout } from '../layouts/AppLayout';
-import { Button } from '../components/ui/Button';
+import { ButtonLink } from '../components/ui/Button';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateBlocks';
 import { useConsoleConfig, useConsoleOverview, useHealth } from '../hooks/useConsoleData';
@@ -21,11 +21,9 @@ export function OverviewPage() {
       subtitle="Live payment totals, webhook delivery metrics, and runtime configuration from this AcquireMock instance."
       breadcrumbs={[{ label: 'Workspace' }, { label: 'Overview' }]}
       actions={
-        <Link to="/app/testing">
-          <Button variant="primary" size="sm">
-            Create test payment
-          </Button>
-        </Link>
+        <ButtonLink to="/app/testing" variant="primary" size="sm">
+          Create test payment
+        </ButtonLink>
       }
     >
       <section className={styles.statusStrip} aria-label="Gateway runtime status">
@@ -99,7 +97,7 @@ export function OverviewPage() {
             <div className={styles.metricBlock}>
               <span className={styles.metricLabel}>Paid volume</span>
               <span className={`${styles.metricValue} mono-num`}>
-                {formatAmount(overviewQuery.data.payments.paid_volume, symbol)}
+                {formatAmount(overviewQuery.data.payments.paid_volume, currencyCode, symbol)}
               </span>
               <span className={styles.metricSub}>
                 Across {overviewQuery.data.payments.paid} settled payments
@@ -143,11 +141,9 @@ export function OverviewPage() {
                   title="No payments recorded yet"
                   description="Create your first test invoice in the Playground to walk through checkout, OTP verification, and webhook delivery."
                   action={
-                    <Link to="/app/testing">
-                      <Button variant="primary" size="sm">
-                        Create test invoice
-                      </Button>
-                    </Link>
+                    <ButtonLink to="/app/testing" variant="primary" size="sm">
+                      Create test invoice
+                    </ButtonLink>
                   }
                 />
               ) : (
@@ -174,7 +170,7 @@ export function OverviewPage() {
                             <StatusBadge status={payment.status} />
                           </td>
                           <td className={`${styles.numCol} mono-num`}>
-                            {formatAmount(payment.amount, symbol)}
+                            {formatAmount(payment.amount, currencyCode, symbol)}
                           </td>
                           <td className={styles.dateCol}>{formatDateTime(payment.created_at)}</td>
                         </tr>

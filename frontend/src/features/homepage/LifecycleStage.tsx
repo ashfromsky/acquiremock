@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useHealth } from '../../hooks/useConsoleData';
+import { formatAmount } from '../../utils/format';
+import { handleTabListKeyDown } from '../../utils/tablist';
 import styles from './LifecycleStage.module.css';
 
 type StageKey = 'invoice' | 'checkout' | 'otp' | 'webhook';
@@ -17,6 +19,8 @@ const STAGES: StageTab[] = [
   { key: 'otp', index: '03', label: 'OTP Check', endpoint: 'POST /otp/verify/{payment_id}' },
   { key: 'webhook', index: '04', label: 'Signed Webhook', endpoint: 'X-Signature HMAC-SHA256' },
 ];
+
+const STAGE_KEYS: readonly StageKey[] = STAGES.map((s) => s.key);
 
 export function LifecycleStage() {
   const [activeStage, setActiveStage] = useState<StageKey>('checkout');
@@ -37,9 +41,11 @@ export function LifecycleStage() {
                 key={stage.key}
                 type="button"
                 role="tab"
+                tabIndex={active ? 0 : -1}
                 aria-selected={active}
                 className={`${styles.tab} ${active ? styles.tabActive : ''}`}
                 onClick={() => setActiveStage(stage.key)}
+                onKeyDown={(e) => handleTabListKeyDown(e, STAGE_KEYS, activeStage, setActiveStage)}
               >
                 <span className={styles.tabIndex}>{stage.index}</span>
                 <span>{stage.label}</span>
@@ -114,7 +120,9 @@ export function LifecycleStage() {
               </div>
               <div className={styles.summaryRow}>
                 <span>Amount due</span>
-                <span className={styles.mono}>25,000 {currency}</span>
+                <span className={styles.mono}>
+                  {formatAmount(25000, currency, currency === 'USD' ? '$' : currency)}
+                </span>
               </div>
               <div className={styles.summaryRow}>
                 <span>Form protection</span>

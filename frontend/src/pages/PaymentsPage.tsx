@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { RefreshCw, Search } from 'lucide-react';
 import { AppLayout } from '../layouts/AppLayout';
-import { Button } from '../components/ui/Button';
+import { Button, ButtonLink } from '../components/ui/Button';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateBlocks';
 import { useConsoleConfig, useConsolePayments } from '../hooks/useConsoleData';
 import { formatAmount, formatDateTime, formatShortId } from '../utils/format';
+import { handleTabListKeyDown } from '../utils/tablist';
 import styles from './PaymentsPage.module.css';
 
 const STATUS_TABS = [
@@ -17,6 +18,8 @@ const STATUS_TABS = [
   { key: 'failed', label: 'Failed' },
   { key: 'expired', label: 'Expired' },
 ];
+
+const STATUS_TAB_KEYS = STATUS_TABS.map((t) => t.key);
 
 export function PaymentsPage() {
   const [status, setStatus] = useState('all');
@@ -37,6 +40,7 @@ export function PaymentsPage() {
   });
 
   const symbol = configQuery.data?.currency_symbol ?? '$';
+  const currencyCode = configQuery.data?.currency_code ?? 'USD';
   const hasFilters = status !== 'all' || Boolean(debouncedSearch.trim());
 
   return (
@@ -45,11 +49,9 @@ export function PaymentsPage() {
       subtitle="Inspect invoices created via API or Playground, filter by lifecycle status, and review webhook attempts."
       breadcrumbs={[{ label: 'Workspace', to: '/app/overview' }, { label: 'Payments' }]}
       actions={
-        <Link to="/app/testing">
-          <Button variant="primary" size="sm">
-            Create test payment
-          </Button>
-        </Link>
+        <ButtonLink to="/app/testing" variant="primary" size="sm">
+          Create test payment
+        </ButtonLink>
       }
     >
       <div className={styles.toolbar}>
@@ -59,9 +61,11 @@ export function PaymentsPage() {
               key={tab.key}
               type="button"
               role="tab"
+              tabIndex={status === tab.key ? 0 : -1}
               aria-selected={status === tab.key}
               className={`${styles.tab} ${status === tab.key ? styles.tabActive : ''}`}
               onClick={() => setStatus(tab.key)}
+              onKeyDown={(e) => handleTabListKeyDown(e, STATUS_TAB_KEYS, tab.key, setStatus)}
             >
               {tab.label}
             </button>
@@ -123,11 +127,9 @@ export function PaymentsPage() {
             title="No payments have been created yet"
             description="Create a test invoice in the Playground or send a POST /api/create-invoice request from your application."
             action={
-              <Link to="/app/testing">
-                <Button variant="primary" size="sm">
-                  Open payment playground
-                </Button>
-              </Link>
+              <ButtonLink to="/app/testing" variant="primary" size="sm">
+                Open payment playground
+              </ButtonLink>
             }
           />
         )
@@ -154,7 +156,7 @@ export function PaymentsPage() {
                     </Link>
                   </td>
                   <td data-label="Amount" className={`${styles.numCol} mono-num`}>
-                    {formatAmount(payment.amount, symbol)}
+                    {formatAmount(payment.amount, currencyCode, symbol)}
                   </td>
                   <td data-label="Status">
                     <StatusBadge status={payment.status} />
@@ -163,9 +165,11 @@ export function PaymentsPage() {
                     {payment.card_mask || 'Not entered'}
                   </td>
                   <td data-label="Webhook">
-                    {payment.webhook_status ? (
+                    {payment.webhook_delivery_state || payment.webhook_status ? (
                       <div className={styles.webhookCell}>
-                        <StatusBadge status={payment.webhook_status} />
+                        <StatusBadge
+                          status={payment.webhook_delivery_state || payment.webhook_status}
+                        />
                         <span className={styles.attemptsText}>
                           {payment.webhook_attempts} {payment.webhook_attempts === 1 ? 'attempt' : 'attempts'}
                         </span>

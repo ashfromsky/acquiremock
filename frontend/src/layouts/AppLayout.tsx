@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   Activity,
   CreditCard,
   ExternalLink,
   FlaskConical,
+  LogOut,
   Menu,
   Settings,
   Webhook,
@@ -13,7 +14,8 @@ import {
 } from 'lucide-react';
 import { BrandLogo } from '../components/BrandLogo';
 import { ThemeToggle } from '../components/ThemeToggle';
-import { useAuthSession } from '../hooks/useAuth';
+import { useAdminLogout, useAdminSession } from '../hooks/useAdminAuth';
+import { useToastStore } from '../store/toastStore';
 import styles from './AppLayout.module.css';
 
 interface Crumb {
@@ -45,7 +47,12 @@ export function AppLayout({
 }: AppLayoutProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const location = useLocation();
-  const { data: session } = useAuthSession();
+  const navigate = useNavigate();
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
+  const drawerCloseRef = useRef<HTMLButtonElement>(null);
+  const { data: adminSession } = useAdminSession();
+  const logoutMutation = useAdminLogout();
+  const pushToast = useToastStore((s) => s.push);
 
   useEffect(() => {
     setDrawerOpen(false);
@@ -53,88 +60,117 @@ export function AppLayout({
 
   useEffect(() => {
     if (!drawerOpen) return;
+    const prevFocus = document.activeElement as HTMLElement | null;
+    drawerCloseRef.current?.focus();
+
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') setDrawerOpen(false);
     }
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      prevFocus?.focus?.();
+    };
   }, [drawerOpen]);
 
-  const sidebarContent = (
-    <div className={styles.sidebarInner}>
-      <div className={styles.sidebarTop}>
-        <Link to="/" className={styles.brandLink} aria-label="AcquireMock public homepage">
-          <BrandLogo height={22} />
-        </Link>
-        <button
-          type="button"
-          className={styles.drawerClose}
-          onClick={() => setDrawerOpen(false)}
-          aria-label="Close navigation"
-        >
-          <X size={18} strokeWidth={1.75} />
-        </button>
-      </div>
+  async function handleAdminLogout() {
+    try {
+      await logoutMutation.mutateAsync();
+      pushToast('Signed out of administrator console.', 'info');
+      navigate('/app/login', { replace: true });
+    } catch (err) {
+      pushToast(err instanceof Error ? err.message : 'Sign out failed', 'error');
+    }
+  }
 
-      <div className={styles.navSection}>
-        <div className={styles.sectionLabel}>Workspace</div>
-        <nav className={styles.navList} aria-label="Developer workspace">
-          {WORKSPACE_NAV.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                className={({ isActive }) =>
-                  `${styles.navItem} ${isActive ? styles.navItemActive : ''}`
-                }
-              >
-                <Icon size={16} strokeWidth={1.65} aria-hidden="true" />
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
-        </nav>
-      </div>
-
-      <div className={styles.navSection}>
-        <div className={styles.sectionLabel}>Configuration</div>
-        <nav className={styles.navList} aria-label="Configuration and documentation">
-          <NavLink
-            to="/app/settings"
-            className={({ isActive }) =>
-              `${styles.navItem} ${isActive ? styles.navItemActive : ''}`
-            }
+  function renderSidebarContent(isDrawer: boolean) {
+    return (
+      <div className={styles.sidebarInner}>
+        <div className={styles.sidebarTop}>
+          <Link to="/" className={styles.brandLink} aria-label="AcquireMock public homepage">
+            <BrandLogo height={26} />
+          </Link>
+          <button
+            ref={isDrawer ? drawerCloseRef : undefined}
+            type="button"
+            className={styles.drawerClose}
+            onClick={() => setDrawerOpen(false)}
+            aria-label="Close navigation"
           >
-            <Settings size={16} strokeWidth={1.65} aria-hidden="true" />
-            <span>Settings</span>
-          </NavLink>
-          <a href="/docs" target="_blank" rel="noreferrer" className={styles.navItem}>
-            <ExternalLink size={16} strokeWidth={1.65} aria-hidden="true" />
-            <span>API Reference</span>
-          </a>
-        </nav>
-      </div>
+            <X size={18} strokeWidth={1.75} />
+          </button>
+        </div>
 
-      <div className={styles.sidebarFooter}>
-        <Link to="/app/settings" className={styles.accountLink}>
-          <span className={styles.accountLabel}>
-            {session?.authenticated ? 'Signed in as' : 'Customer session'}
-          </span>
-          <span className={styles.accountValue}>
-            {session?.authenticated && session.email ? session.email : 'Sign in with email'}
-          </span>
-        </Link>
-        <Link to="/" className={styles.publicBackLink}>
-          Back to homepage
-        </Link>
+        <div className={styles.navSection}>
+          <div className={styles.sectionLabel}>Workspace</div>
+          <nav className={styles.navList} aria-label="Developer workspace">
+            {WORKSPACE_NAV.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={({ isActive }) =>
+                    `${styles.navItem} ${isActive ? styles.navItemActive : ''}`
+                  }
+                >
+                  <Icon size={16} strokeWidth={1.65} aria-hidden="true" />
+                  <span>{item.label}</span>
+                </NavLink>
+              );
+            })}
+          </nav>
+        </div>
+
+        <div className={styles.navSection}>
+          <div className={styles.sectionLabel}>Configuration</div>
+          <nav className={styles.navList} aria-label="Configuration and documentation">
+            <NavLink
+              to="/app/settings"
+              className={({ isActive }) =>
+                `${styles.navItem} ${isActive ? styles.navItemActive : ''}`
+              }
+            >
+              <Settings size={16} strokeWidth={1.65} aria-hidden="true" />
+              <span>Settings</span>
+            </NavLink>
+            <a href="/docs" target="_blank" rel="noreferrer" className={styles.navItem}>
+              <ExternalLink size={16} strokeWidth={1.65} aria-hidden="true" />
+              <span>API Reference</span>
+            </a>
+          </nav>
+        </div>
+
+        <div className={styles.sidebarFooter}>
+          <div className={styles.adminSessionBox}>
+            <div className={styles.adminIdentity}>
+              <span className={styles.accountLabel}>Console admin</span>
+              <span className={styles.accountValue}>
+                {adminSession?.username || 'Administrator'}
+              </span>
+            </div>
+            <button
+              type="button"
+              className={styles.logoutBtn}
+              onClick={() => void handleAdminLogout()}
+              disabled={logoutMutation.isPending}
+              aria-label="Sign out of administrator console"
+            >
+              <LogOut size={14} strokeWidth={1.75} aria-hidden="true" />
+              <span>Sign out</span>
+            </button>
+          </div>
+          <Link to="/" className={styles.publicBackLink}>
+            Back to homepage
+          </Link>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 
   return (
     <div className={styles.shell}>
-      <aside className={styles.sidebar}>{sidebarContent}</aside>
+      <aside className={styles.sidebar}>{renderSidebarContent(false)}</aside>
 
       {drawerOpen ? (
         <div
@@ -145,7 +181,7 @@ export function AppLayout({
           onClick={() => setDrawerOpen(false)}
         >
           <aside className={styles.drawerPanel} onClick={(e) => e.stopPropagation()}>
-            {sidebarContent}
+            {renderSidebarContent(true)}
           </aside>
         </div>
       ) : null}
@@ -154,9 +190,11 @@ export function AppLayout({
         <header className={styles.topBar}>
           <div className={styles.topBarLeft}>
             <button
+              ref={menuBtnRef}
               type="button"
               className={styles.menuBtn}
               onClick={() => setDrawerOpen(true)}
+              aria-expanded={drawerOpen}
               aria-label="Open workspace navigation"
             >
               <Menu size={18} strokeWidth={1.75} />

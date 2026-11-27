@@ -29,6 +29,13 @@ export const createInvoiceSchema = z.object({
 
 export type CreateInvoiceFormValues = z.infer<typeof createInvoiceSchema>;
 
+export const adminLoginSchema = z.object({
+  username: z.string().trim().min(1, 'Administrator username is required'),
+  password: z.string().min(1, 'Administrator password is required'),
+});
+
+export type AdminLoginFormValues = z.infer<typeof adminLoginSchema>;
+
 export const sendCodeSchema = z.object({
   email: z.string().trim().email('Enter a valid email address'),
 });

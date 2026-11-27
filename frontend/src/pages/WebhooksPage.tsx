@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
 import { RefreshCw, RotateCw } from 'lucide-react';
 import { AppLayout } from '../layouts/AppLayout';
-import { Button } from '../components/ui/Button';
+import { Button, ButtonLink } from '../components/ui/Button';
 import { Input, Textarea } from '../components/ui/Input';
 import { CopyButton } from '../components/ui/CopyButton';
 import { StatusBadge } from '../components/ui/StatusBadge';
@@ -15,11 +15,14 @@ import { useConsoleWebhooks, useRetryWebhook } from '../hooks/useConsoleData';
 import { webhookVerifySchema, type WebhookVerifyFormValues } from '../schemas/forms';
 import { useToastStore } from '../store/toastStore';
 import { formatDateTime, formatShortId, prettyJson } from '../utils/format';
+import { handleTabListKeyDown } from '../utils/tablist';
 import type { WebhookLogRecord } from '../types/api';
 import styles from './WebhooksPage.module.css';
 
 type FilterStatus = 'all' | 'succeeded' | 'failed';
 type PageTab = 'logs' | 'verifier';
+const PAGE_TABS: readonly PageTab[] = ['logs', 'verifier'];
+const FILTER_TABS: readonly FilterStatus[] = ['all', 'succeeded', 'failed'];
 
 export function WebhooksPage() {
   const [pageTab, setPageTab] = useState<PageTab>('logs');
@@ -128,18 +131,22 @@ export function WebhooksPage() {
         <button
           type="button"
           role="tab"
+          tabIndex={pageTab === 'logs' ? 0 : -1}
           aria-selected={pageTab === 'logs'}
           className={`${styles.topTab} ${pageTab === 'logs' ? styles.topTabActive : ''}`}
           onClick={() => setPageTab('logs')}
+          onKeyDown={(e) => handleTabListKeyDown(e, PAGE_TABS, pageTab, setPageTab)}
         >
           Delivery history
         </button>
         <button
           type="button"
           role="tab"
+          tabIndex={pageTab === 'verifier' ? 0 : -1}
           aria-selected={pageTab === 'verifier'}
           className={`${styles.topTab} ${pageTab === 'verifier' ? styles.topTabActive : ''}`}
           onClick={() => setPageTab('verifier')}
+          onKeyDown={(e) => handleTabListKeyDown(e, PAGE_TABS, pageTab, setPageTab)}
         >
           Signature verifier
         </button>
@@ -149,14 +156,16 @@ export function WebhooksPage() {
         <div className={styles.logsView}>
           <div className={styles.toolbar}>
             <div className={styles.filterGroup} role="tablist" aria-label="Filter webhook deliveries">
-              {(['all', 'succeeded', 'failed'] as FilterStatus[]).map((filter) => (
+              {FILTER_TABS.map((filter) => (
                 <button
                   key={filter}
                   type="button"
                   role="tab"
+                  tabIndex={statusFilter === filter ? 0 : -1}
                   aria-selected={statusFilter === filter}
                   className={`${styles.filterBtn} ${statusFilter === filter ? styles.filterActive : ''}`}
                   onClick={() => setStatusFilter(filter)}
+                  onKeyDown={(e) => handleTabListKeyDown(e, FILTER_TABS, statusFilter, setStatusFilter)}
                 >
                   {filter === 'all'
                     ? `All (${webhooksQuery.data?.summary.total ?? 0})`
@@ -200,11 +209,9 @@ export function WebhooksPage() {
               }
               action={
                 statusFilter === 'all' ? (
-                  <Link to="/app/testing">
-                    <Button variant="primary" size="sm">
-                      Create test payment
-                    </Button>
-                  </Link>
+                  <ButtonLink to="/app/testing" variant="primary" size="sm">
+                    Create test payment
+                  </ButtonLink>
                 ) : (
                   <Button variant="secondary" size="sm" onClick={() => setStatusFilter('all')}>
                     Show all logs
@@ -221,6 +228,7 @@ export function WebhooksPage() {
                     <div className={styles.logSummary}>
                       <div className={styles.logMeta}>
                         <StatusBadge status={log.success ? 'success' : 'failed'} />
+                        {log.trigger ? <StatusBadge status={log.trigger} /> : null}
                         <Link to={`/app/payments/${log.payment_id}`} className={styles.paymentLink}>
                           {formatShortId(log.payment_id)}
                         </Link>

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ExternalLink, RotateCw } from 'lucide-react';
 import { AppLayout } from '../layouts/AppLayout';
-import { Button } from '../components/ui/Button';
+import { AnchorButton, Button } from '../components/ui/Button';
 import { CopyButton } from '../components/ui/CopyButton';
 import { StatusBadge } from '../components/ui/StatusBadge';
 import { EmptyState, ErrorState, LoadingState } from '../components/ui/StateBlocks';
@@ -25,7 +25,13 @@ export function PaymentDetailPage() {
   const retryMutation = useRetryWebhook();
 
   const symbol = configQuery.data?.currency_symbol ?? '$';
+  const currencyCode = configQuery.data?.currency_code ?? 'USD';
   const payment = detailQuery.data;
+  const canRetryWebhook = payment?.webhook_can_retry ?? (
+    payment?.status === 'paid' &&
+    payment.webhook_status !== 'success' &&
+    payment.webhook_attempts < (configQuery.data?.max_webhook_attempts ?? 5)
+  );
 
   async function handleRetryWebhook() {
     if (!payment) return;
@@ -73,12 +79,16 @@ export function PaymentDetailPage() {
       ]}
       actions={
         contextualHref && contextualLabel ? (
-          <a href={contextualHref} target="_blank" rel="noreferrer">
-            <Button variant="secondary" size="sm">
-              <span>{contextualLabel}</span>
-              <ExternalLink size={14} strokeWidth={1.75} />
-            </Button>
-          </a>
+          <AnchorButton
+            href={contextualHref}
+            target="_blank"
+            rel="noreferrer"
+            variant="secondary"
+            size="sm"
+          >
+            <span>{contextualLabel}</span>
+            <ExternalLink size={14} strokeWidth={1.75} />
+          </AnchorButton>
         ) : undefined
       }
     >
@@ -96,7 +106,7 @@ export function PaymentDetailPage() {
             <div className={styles.summaryItem}>
               <span className={styles.summaryLabel}>Amount</span>
               <span className={`${styles.summaryBig} mono-num`}>
-                {formatAmount(payment.amount, symbol)}
+                {formatAmount(payment.amount, currencyCode, symbol)}
               </span>
             </div>
             <div className={styles.summaryItem}>
@@ -168,8 +178,11 @@ export function PaymentDetailPage() {
               <div>
                 <h2 className={styles.panelTitle}>Webhook delivery logs</h2>
                 <p className={styles.panelSub}>
-                  {payment.webhook_attempts} recorded {payment.webhook_attempts === 1 ? 'attempt' : 'attempts'} · Status:{' '}
-                  {payment.webhook_status || 'pending'}
+                  {payment.webhook_attempts} recorded {payment.webhook_attempts === 1 ? 'attempt' : 'attempts'} · State:{' '}
+                  {payment.webhook_delivery_state || payment.webhook_status || 'never_attempted'}
+                  {payment.webhook_next_attempt_at
+                    ? ` · Next retry: ${formatDateTime(payment.webhook_next_attempt_at)}`
+                    : ''}
                 </p>
               </div>
 
@@ -178,6 +191,12 @@ export function PaymentDetailPage() {
                 size="sm"
                 onClick={() => void handleRetryWebhook()}
                 loading={retryMutation.isPending}
+                disabled={!canRetryWebhook}
+                title={
+                  canRetryWebhook
+                    ? 'Send webhook delivery now'
+                    : 'Manual retry is available only for paid payments with pending or failed webhooks below max attempts'
+                }
               >
                 <RotateCw size={14} strokeWidth={1.75} />
                 <span>Send webhook now</span>
@@ -201,6 +220,7 @@ export function PaymentDetailPage() {
                             Attempt #{log.attempt_number}
                           </span>
                           <StatusBadge status={log.success ? 'success' : 'failed'} />
+                          {log.trigger ? <StatusBadge status={log.trigger} /> : null}
                           <span className={`${styles.httpCode} mono-num`}>
                             {log.response_status ? `HTTP ${log.response_status}` : log.error_message || 'No response'}
                           </span>
