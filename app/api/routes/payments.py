@@ -1,32 +1,43 @@
 ﻿import hmac
-import uuid
 import logging
-from datetime import datetime, timedelta
+import uuid
+from datetime import timedelta
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Request, Form, BackgroundTasks, Header
+from fastapi import APIRouter, BackgroundTasks, Depends, Form, Header, Request
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from app.core.config import BASE_URL, COOKIE_SECURE, PAYMENT_TTL_MINUTES
+from app.core.limiter import limiter
+from app.core.time import utcnow
 from app.database.core.session import get_db
-from app.models.invoice import CreateInvoiceRequest, CreateInvoiceResponse
-from app.models.errors import (
-    PaymentNotFoundError,
-    PaymentAlreadyProcessedError,
-    PaymentExpiredError,
-    CSRFTokenMismatchError,
-    InsufficientFundsError,
-    InvalidCardError,
-    SavedCardNotFoundError
-)
-from app.models.main_models import Payment, PaymentStatus, SavedCard
 from app.functional.main_functions import (
     create_payment,
     get_payment,
     update_payment,
 )
+from app.models.errors import (
+    CSRFTokenMismatchError,
+    InsufficientFundsError,
+    InvalidCardError,
+    PaymentAlreadyProcessedError,
+    PaymentExpiredError,
+    PaymentNotFoundError,
+    SavedCardNotFoundError,
+)
+from app.models.invoice import CreateInvoiceRequest, CreateInvoiceResponse
+from app.models.main_models import Payment, PaymentStatus, SavedCard
+from app.security.crypto import (
+    create_signed_email_token,
+    generate_secure_otp,
+    hash_sensitive_data,
+    verify_sensitive_data,
+    verify_signed_email_token,
+)
+from app.security.sanitizer import validate_reference
 from app.services.payments.idempotency import (
     claim_idempotency_key,
     complete_idempotency_key,
@@ -35,20 +46,11 @@ from app.services.payments.idempotency import (
     release_idempotency_key,
     replay_idempotency_outcome,
 )
-from app.security.sanitizer import validate_reference
-from app.security.crypto import (
-    create_signed_email_token,
-    generate_csrf_token,
-    generate_secure_otp,
-    hash_sensitive_data,
-    verify_sensitive_data,
-    verify_signed_email_token
+from app.services.payments.lifecycle import (
+    expire_payment_if_needed,
+    finalize_successful_payment,
 )
 from app.services.smtp_service import send_otp_email
-from app.core.config import BASE_URL, COOKIE_SECURE, CURRENCY_CODE, CURRENCY_SYMBOL
-from app.core.currency import format_minor_amount
-from app.core.limiter import limiter
-from app.core.time import utcnow
 
 logger = logging.getLogger(__name__)
 templates = Jinja2Templates(directory="templates/pages")
@@ -57,50 +59,6 @@ router = APIRouter(
     prefix="/api",
     tags=["payments"],
 )
-
-
-async def finalize_successful_payment(
-        payment: Payment,
-        db: AsyncSession,
-        background_tasks: BackgroundTasks
-):
-    from app.models.main_models import SuccessfulOperation
-    from app.functional.main_functions import send_successful_operation
-    from app.services.webhook_service import dispatch_webhook
-    from app.services.smtp_service import send_receipt_email
-
-    logger.info(f"Finalizing payment {payment.id}")
-    payment.status = "paid"
-    payment.paid_at = datetime.utcnow()
-    await update_payment(db, payment)
-
-    try:
-        new_op = SuccessfulOperation(
-            payment_id=payment.id,
-            email=payment.otp_email,
-            amount=payment.amount,
-            reference=payment.reference,
-            card_mask=payment.card_mask,
-            redirect_url=payment.redirect_url
-        )
-        await send_successful_operation(db, new_op)
-        logger.info(f"Operation {payment.id} saved to DB")
-    except Exception as e:
-        logger.error(f"DB Error during finalization: {e}")
-
-    if payment.otp_email:
-        background_tasks.add_task(send_receipt_email, payment.otp_email, {
-            "payment_id": payment.id,
-            "amount": payment.amount,
-            "formatted_amount": format_minor_amount(payment.amount, CURRENCY_CODE, CURRENCY_SYMBOL),
-            "reference": payment.reference,
-            "card_mask": payment.card_mask,
-            "currency_code": CURRENCY_CODE,
-            "currency_symbol": CURRENCY_SYMBOL
-        })
-        logger.info(f"Receipt email task added for {payment.otp_email}")
-
-    background_tasks.add_task(dispatch_webhook, payment.id)
 
 
 @router.post("/create-invoice", response_model=CreateInvoiceResponse)
@@ -113,6 +71,7 @@ async def create_invoice(
     clean_reference = validate_reference(invoice.reference)
     logger.info(f"Creating invoice for amount {invoice.amount}, ref {clean_reference}")
     payment_id = str(uuid.uuid4())
+    now = utcnow()
 
     payment = Payment(
         id=payment_id,
@@ -120,8 +79,10 @@ async def create_invoice(
         reference=clean_reference,
         webhook_url=invoice.webhook_url,
         redirect_url=invoice.redirect_url,
-        status="pending",
-        expires_at=datetime.utcnow() + timedelta(minutes=15)
+        status=PaymentStatus.PENDING.value,
+        created_at=now,
+        updated_at=now,
+        expires_at=now + timedelta(minutes=PAYMENT_TTL_MINUTES),
     )
 
     await create_payment(db, payment)
@@ -223,9 +184,7 @@ async def _execute_payment_submission(
     if payment.status in [PaymentStatus.PAID, PaymentStatus.EXPIRED, PaymentStatus.FAILED]:
         raise PaymentAlreadyProcessedError(payment_id)
 
-    if payment.expires_at < datetime.utcnow():
-        payment.status = PaymentStatus.EXPIRED
-        await update_payment(db, payment)
+    if await expire_payment_if_needed(db, payment):
         raise PaymentExpiredError(payment_id)
 
     if claimed_key is not None and payment.idempotency_key is None:

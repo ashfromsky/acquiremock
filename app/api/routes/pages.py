@@ -13,6 +13,10 @@ from app.core.limiter import get_payment_otp_key, limiter
 from app.core.time import utcnow
 from app.database.core.session import get_db
 from app.functional.main_functions import get_payment, update_payment
+from app.services.payments.lifecycle import (
+    expire_payment_if_needed,
+    finalize_successful_payment,
+)
 from app.models.errors import (
     CSRFTokenMismatchError,
     InvalidOTPError,
@@ -50,11 +54,7 @@ async def otp_page(payment_id: str, request: Request, db: AsyncSession = Depends
     if not payment:
         raise PaymentNotFoundError(payment_id)
 
-    if payment.expires_at < utcnow():
-        payment.status = PaymentStatus.EXPIRED
-        payment.otp_code = None
-        payment.otp_expires_at = None
-        await update_payment(db, payment)
+    if await expire_payment_if_needed(db, payment):
         raise PaymentExpiredError(payment_id)
 
     if payment.status != PaymentStatus.WAITING_FOR_OTP:
@@ -89,8 +89,6 @@ async def verify_otp(
         csrf_token: str = Form(...),
         db: AsyncSession = Depends(get_db)
 ):
-    from app.api.routes.payments import finalize_successful_payment
-
     cookie_token = request.cookies.get("csrf_token")
     if not cookie_token or not hmac.compare_digest(cookie_token, csrf_token):
         raise CSRFTokenMismatchError(payment_id)
@@ -107,14 +105,10 @@ async def verify_otp(
     if payment.status != PaymentStatus.WAITING_FOR_OTP:
         raise PaymentError("INVALID_PAYMENT_STATE", "Payment is not awaiting OTP", 409, payment_id)
 
-    now = utcnow()
-    if payment.expires_at < now:
-        payment.status = PaymentStatus.EXPIRED
-        payment.otp_code = None
-        payment.otp_expires_at = None
-        await update_payment(db, payment)
+    if await expire_payment_if_needed(db, payment):
         raise PaymentExpiredError(payment_id)
 
+    now = utcnow()
     if payment.otp_expires_at is not None and payment.otp_expires_at <= now:
         payment.otp_code = None
         payment.otp_expires_at = None
@@ -184,14 +178,10 @@ async def resend_otp(
     if payment.status != PaymentStatus.WAITING_FOR_OTP:
         raise PaymentError("INVALID_PAYMENT_STATE", "Payment is not awaiting OTP", 409, payment_id)
 
-    now = utcnow()
-    if payment.expires_at < now:
-        payment.status = PaymentStatus.EXPIRED
-        payment.otp_code = None
-        payment.otp_expires_at = None
-        await update_payment(db, payment)
+    if await expire_payment_if_needed(db, payment):
         raise PaymentExpiredError(payment_id)
 
+    now = utcnow()
     if payment.otp_resend_count >= PAYMENT_OTP_MAX_RESENDS:
         raise OTPMaxAttemptsError(payment_id, "Maximum OTP resend attempts exceeded")
 
