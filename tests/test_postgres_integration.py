@@ -1,3 +1,4 @@
+import asyncio
 import os
 from datetime import timedelta
 from pathlib import Path
@@ -33,7 +34,7 @@ async def test_postgres_migrations_and_skip_locked(monkeypatch):
     cfg = Config(str(repo_root / "alembic.ini"))
     cfg.set_main_option("script_location", str(repo_root / "alembic"))
     cfg.set_main_option("sqlalchemy.url", POSTGRES_TEST_URL)
-    command.upgrade(cfg, "head")
+    await asyncio.to_thread(command.upgrade, cfg, "head")
 
     engine = create_async_engine(POSTGRES_TEST_URL, echo=False)
     session_factory = sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
@@ -64,6 +65,7 @@ async def test_postgres_migrations_and_skip_locked(monkeypatch):
             with pytest.raises(IdempotencyConflictError):
                 await claim_idempotency_key(s, "pg-idem-1", "pg-pay-other", fp)
 
+            await s.refresh(payment)
             bg = BackgroundTasks()
             await finalize_successful_payment(payment, s, bg)
 
