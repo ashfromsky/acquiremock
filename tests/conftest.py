@@ -19,8 +19,8 @@ os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["TESTING"] = "true"
 os.environ.setdefault("WEBHOOK_SECRET", "dev-pytest-webhook-secret-8f4c1a9e3b7d2056")
 os.environ.setdefault("SESSION_SECRET", "dev-pytest-session-secret-5a2d9c8e1f4b7039")
-os.environ.setdefault("ADMIN_USERNAME", TEST_ADMIN_USERNAME)
-os.environ.setdefault("ADMIN_PASSWORD_HASH", TEST_ADMIN_PASSWORD_HASH)
+os.environ["ADMIN_USERNAME"] = TEST_ADMIN_USERNAME
+os.environ["ADMIN_PASSWORD_HASH"] = TEST_ADMIN_PASSWORD_HASH
 
 import app.database.core.session as db_session_module
 from app.core.limiter import limiter
