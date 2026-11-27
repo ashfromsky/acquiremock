@@ -84,7 +84,7 @@ test-cov: ## Run tests with coverage
 
 test-integration: ## Run integration tests (requires running server)
 	@echo "$(CYAN)Running integration tests...$(NC)"
-	python tests/test_payment.py
+	python scripts/manual_payment_test.py
 
 # Code Quality
 lint: ## Run linters (flake8)
