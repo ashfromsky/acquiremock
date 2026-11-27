@@ -9,7 +9,7 @@ interface BrandLogoProps {
 export function BrandLogo({
   variant = 'horizontal',
   surface = 'auto',
-  height = 24,
+  height = 29,
 }: BrandLogoProps) {
   const theme = useThemeStore((s) => s.theme);
 

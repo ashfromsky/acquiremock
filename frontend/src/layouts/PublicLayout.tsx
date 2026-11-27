@@ -28,7 +28,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
         <div className={styles.headerInner}>
           <div className={styles.brandCell}>
             <Link to="/" className={styles.brandLink} aria-label="AcquireMock home">
-              <BrandLogo height={24} />
+              <BrandLogo height={29} />
             </Link>
           </div>
 
@@ -100,7 +100,7 @@ export function PublicLayout({ children }: PublicLayoutProps) {
         <div className={styles.footerInner}>
           <div className={styles.footerTop}>
             <div className={styles.footerBrand}>
-              <BrandLogo height={22} />
+              <BrandLogo height={26} />
               <p className={styles.disclaimer}>
                 Mock payment gateway for development and integration testing only. Never enter real payment card information.
               </p>
