@@ -38,7 +38,8 @@ from app.security.crypto import (
     verify_signed_email_token
 )
 from app.services.smtp_service import send_otp_email
-from app.core.config import BASE_URL, COOKIE_SECURE, CURRENCY_SYMBOL
+from app.core.config import BASE_URL, COOKIE_SECURE, CURRENCY_CODE, CURRENCY_SYMBOL
+from app.core.currency import format_minor_amount
 from app.core.limiter import limiter
 
 logger = logging.getLogger(__name__)
@@ -83,8 +84,10 @@ async def finalize_successful_payment(
         background_tasks.add_task(send_receipt_email, payment.otp_email, {
             "payment_id": payment.id,
             "amount": payment.amount,
+            "formatted_amount": format_minor_amount(payment.amount, CURRENCY_CODE, CURRENCY_SYMBOL),
             "reference": payment.reference,
             "card_mask": payment.card_mask,
+            "currency_code": CURRENCY_CODE,
             "currency_symbol": CURRENCY_SYMBOL
         })
         logger.info(f"Receipt email task added for {payment.otp_email}")

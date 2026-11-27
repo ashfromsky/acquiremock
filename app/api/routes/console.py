@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 import app.core.config as config
+from app.core.currency import get_currency_decimals
 from app.core.limiter import limiter
 from app.database.core.session import get_db
 from app.functional.main_functions import get_payment
@@ -74,6 +75,7 @@ async def get_console_config():
         "base_url": config.BASE_URL,
         "currency_code": config.CURRENCY_CODE,
         "currency_symbol": config.CURRENCY_SYMBOL,
+        "currency_decimals": get_currency_decimals(config.CURRENCY_CODE),
         "smtp_enabled": EMAIL_ENABLED,
         "allow_local_webhooks": config.ALLOW_LOCAL_WEBHOOKS,
         "payment_ttl_minutes": config.PAYMENT_TTL_MINUTES,
@@ -98,7 +100,7 @@ async def get_console_overview(db: AsyncSession = Depends(get_db)):
         PaymentStatus.EXPIRED.value: 0,
         PaymentStatus.REFUNDED.value: 0,
     }
-    paid_volume = 0.0
+    paid_volume = 0
     total_payments = 0
 
     for status_value, count, amount_sum in status_rows:
@@ -107,7 +109,7 @@ async def get_console_overview(db: AsyncSession = Depends(get_db)):
         if key in counts:
             counts[key] = int(count)
         if key == PaymentStatus.PAID.value:
-            paid_volume = float(amount_sum or 0)
+            paid_volume = int(amount_sum or 0)
 
     webhook_rows = (
         await db.execute(

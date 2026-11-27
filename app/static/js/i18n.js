@@ -150,11 +150,16 @@ function changeLanguage(lang) {
         const key = elem.getAttribute('data-i18n');
         if (translations[lang] && translations[lang][key]) {
             if (key === 'pay_btn') {
-                const amount = elem.getAttribute('data-amount');
-                const currency = elem.getAttribute('data-currency');
-                elem.textContent = amount && currency
-                    ? translations[lang][key] + ` ${amount} ${currency}`
-                    : translations[lang][key];
+                const formattedAmount = elem.getAttribute('data-formatted-amount');
+                if (formattedAmount) {
+                    elem.textContent = translations[lang][key] + ` ${formattedAmount}`;
+                } else {
+                    const amount = elem.getAttribute('data-amount');
+                    const currency = elem.getAttribute('data-currency');
+                    elem.textContent = amount && currency
+                        ? translations[lang][key] + ` ${amount} ${currency}`
+                        : translations[lang][key];
+                }
             } else {
                 elem.textContent = translations[lang][key];
             }

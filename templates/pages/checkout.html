@@ -81,10 +81,9 @@
         </header>
 
         <main class="pay-card" id="mainContainer">
-            {% set display_amount = amount | int if amount == amount | int else amount %}
             <div class="amount-block">
                 <span class="amount-eyebrow" data-i18n="to_pay">Amount due</span>
-                <div class="amount-value">{{ display_amount }} {{ currency_symbol }}</div>
+                <div class="amount-value">{{ formatted_amount }}</div>
                 <div class="amount-meta">
                     <span class="ref-badge">#{{ reference }}</span>
                     <button type="button" id="currentUserDisplay" class="account-switch" onclick="resetUser()" data-i18n="change_acc">
@@ -129,8 +128,8 @@
                     <span data-i18n="save_card">Save card for future payments</span>
                 </label>
 
-                <button type="submit" class="btn-primary" id="payBtn" data-i18n="pay_btn" data-amount="{{ display_amount }}" data-currency="{{ currency_symbol }}">
-                    Pay {{ display_amount }} {{ currency_symbol }}
+                <button type="submit" class="btn-primary" id="payBtn" data-i18n="pay_btn" data-formatted-amount="{{ formatted_amount }}">
+                    Pay {{ formatted_amount }}
                 </button>
             </form>
 
@@ -299,7 +298,7 @@
 
                         const right = document.createElement('div');
                         right.style.cssText = 'font-family: var(--font-mono); font-size: 14px; font-weight: 500;';
-                        right.textContent = `${op.amount} ${currencySymbol}`;
+                        right.textContent = op.formatted_amount || `${op.amount} ${currencySymbol}`;
 
                         row.appendChild(left);
                         row.appendChild(right);

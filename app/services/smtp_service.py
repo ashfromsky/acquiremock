@@ -8,6 +8,8 @@ from dotenv import load_dotenv
 from datetime import datetime
 import aiosmtplib
 
+from app.core.currency import format_minor_amount
+
 load_dotenv()
 
 logger = logging.getLogger(__name__)
@@ -91,6 +93,13 @@ async def send_receipt_email(to_email: str, payment_data: dict):
     subject = f"Payment Receipt for Order #{payment_data.get('reference')}"
     template_path = Path("templates/misc/receipt.html")
     currency_symbol = payment_data.get('currency_symbol', CURRENCY_SYMBOL)
+    formatted_amount = payment_data.get('formatted_amount')
+    if not formatted_amount:
+        formatted_amount = format_minor_amount(
+            int(payment_data.get('amount') or 0),
+            payment_data.get('currency_code'),
+            currency_symbol,
+        )
 
     try:
         with open(template_path, "r", encoding="utf-8") as f:
@@ -100,6 +109,7 @@ async def send_receipt_email(to_email: str, payment_data: dict):
         html_content = "<h1>Payment Successful</h1>"
 
     replacements = {
+        "{{ formatted_amount }}": html.escape(str(formatted_amount)),
         "{{ amount }}": html.escape(str(payment_data.get('amount'))),
         "{{ reference }}": html.escape(str(payment_data.get('reference'))),
         "{{ date }}": html.escape(datetime.now().strftime("%d.%m.%Y %H:%M")),
@@ -113,7 +123,7 @@ async def send_receipt_email(to_email: str, payment_data: dict):
 
     text_body = (
         f"Payment successful. "
-        f"Amount: {payment_data.get('amount')} {currency_symbol}. "
+        f"Amount: {formatted_amount}. "
         f"Order: {payment_data.get('reference')}"
     )
 

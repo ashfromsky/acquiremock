@@ -7,7 +7,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import COOKIE_SECURE, CURRENCY_SYMBOL
+from app.core.config import COOKIE_SECURE, CURRENCY_CODE, CURRENCY_SYMBOL
+from app.core.currency import format_minor_amount
 from app.core.limiter import limiter
 from app.database.core.session import get_db
 from app.functional.main_functions import get_payment, update_payment
@@ -171,6 +172,7 @@ async def payment_success(payment_id: str, request: Request, db: AsyncSession = 
         "request": request,
         "payment_id": payment.id,
         "amount": payment.amount,
+        "formatted_amount": format_minor_amount(payment.amount, CURRENCY_CODE, CURRENCY_SYMBOL),
         "reference": payment.reference,
         "card_mask": payment.card_mask,
         "redirect_url": payment.redirect_url,

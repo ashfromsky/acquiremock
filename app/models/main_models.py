@@ -2,6 +2,7 @@
 from enum import Enum
 from typing import Optional
 
+from sqlalchemy import BigInteger, Column
 from sqlmodel import Field, SQLModel
 
 from app.core.time import utcnow
@@ -18,7 +19,7 @@ class Payment(SQLModel, table=True):
     __tablename__ = "payments"
 
     id: str = Field(primary_key=True)
-    amount: float
+    amount: int = Field(sa_column=Column(BigInteger, nullable=False))
     reference: str = Field(index=True)
     webhook_url: str
     redirect_url: str
@@ -44,7 +45,7 @@ class SuccessfulOperation(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     payment_id: str = Field(index=True, unique=True)
     email: str = Field(index=True)
-    amount: float
+    amount: int = Field(sa_column=Column(BigInteger, nullable=False))
     reference: str
     card_mask: str
     redirect_url: str

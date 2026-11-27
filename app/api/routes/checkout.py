@@ -10,7 +10,8 @@ from app.database.core.session import get_db
 from app.functional.main_functions import get_payment, update_payment
 from app.models.errors import PaymentNotFoundError, PaymentAlreadyProcessedError, PaymentExpiredError
 from app.security.crypto import generate_csrf_token, verify_signed_email_token
-from app.core.config import COOKIE_SECURE, CURRENCY_SYMBOL
+from app.core.config import COOKIE_SECURE, CURRENCY_CODE, CURRENCY_SYMBOL
+from app.core.currency import format_minor_amount
 
 logger = logging.getLogger(__name__)
 templates = Jinja2Templates(directory="templates/pages")
@@ -46,6 +47,7 @@ async def checkout(payment_id: str, request: Request, db: AsyncSession = Depends
         "request": request,
         "payment_id": payment_id,
         "amount": payment.amount,
+        "formatted_amount": format_minor_amount(payment.amount, CURRENCY_CODE, CURRENCY_SYMBOL),
         "reference": payment.reference,
         "recent_operations": recent_operations,
         "saved_cards": saved_cards,
