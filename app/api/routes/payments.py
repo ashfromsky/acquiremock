@@ -18,9 +18,10 @@ from app.models.errors import (
     PaymentExpiredError,
     CSRFTokenMismatchError,
     InsufficientFundsError,
+    InvalidCardError,
     SavedCardNotFoundError
 )
-from app.models.main_models import Payment, SavedCard
+from app.models.main_models import Payment, PaymentStatus, SavedCard
 from app.functional.main_functions import (
     create_payment,
     get_payment,
@@ -92,7 +93,12 @@ async def finalize_successful_payment(
 
 
 @router.post("/create-invoice", response_model=CreateInvoiceResponse)
-async def create_invoice(invoice: CreateInvoiceRequest, db: AsyncSession = Depends(get_db)):
+@limiter.limit("30/minute")
+async def create_invoice(
+        request: Request,
+        invoice: CreateInvoiceRequest,
+        db: AsyncSession = Depends(get_db)
+):
     clean_reference = clean_input(invoice.reference)
     logger.info(f"Creating invoice for amount {invoice.amount}, ref {clean_reference}")
     payment_id = str(uuid.uuid4())
@@ -136,12 +142,16 @@ async def process_payment(
 
     if idempotency_key:
         existing = await get_payment_by_idempotency(db, idempotency_key)
-        if existing and existing.id != payment_id:
+        if existing:
             logger.info(f"Duplicate request detected with idempotency key {idempotency_key}")
-            if existing.status == "paid":
+            if existing.status == PaymentStatus.PAID:
                 return RedirectResponse(url=f"/success/{existing.id}", status_code=303)
-            elif existing.status == "waiting_for_otp":
+            elif existing.status == PaymentStatus.WAITING_FOR_OTP:
                 return RedirectResponse(url=f"/otp/{existing.id}", status_code=303)
+            elif existing.status == PaymentStatus.FAILED:
+                raise InsufficientFundsError(existing.id)
+            elif existing.status == PaymentStatus.EXPIRED:
+                raise PaymentExpiredError(existing.id)
 
     logger.info(f"Processing payment {payment_id} for email {email}")
     payment = await get_payment(db, payment_id)
@@ -149,8 +159,13 @@ async def process_payment(
     if not payment:
         raise PaymentNotFoundError(payment_id)
 
-    if payment.status in ["paid", "expired", "failed"]:
+    if payment.status in [PaymentStatus.PAID, PaymentStatus.EXPIRED, PaymentStatus.FAILED]:
         raise PaymentAlreadyProcessedError(payment_id)
+
+    if payment.expires_at < datetime.utcnow():
+        payment.status = PaymentStatus.EXPIRED
+        await update_payment(db, payment)
+        raise PaymentExpiredError(payment_id)
 
     if idempotency_key:
         payment.idempotency_key = idempotency_key
@@ -162,7 +177,11 @@ async def process_payment(
     verified_email = verify_signed_email_token(request.cookies.get("user_session"))
 
     if saved_card_id and saved_card_id.strip():
-        card_id_int = int(saved_card_id)
+        try:
+            card_id_int = int(saved_card_id.strip())
+        except ValueError:
+            raise InvalidCardError(payment_id)
+
         if not verified_email:
             raise SavedCardNotFoundError(card_id_int)
 
@@ -192,6 +211,9 @@ async def process_payment(
             payment.card_mask = card_mask_display
 
             if save_card_bool:
+                if not expiry or not expiry.strip():
+                    raise InvalidCardError(payment_id)
+
                 existing = await db.execute(select(SavedCard).where(
                     SavedCard.email == email,
                     SavedCard.card_mask == card_mask_display
@@ -201,8 +223,8 @@ async def process_payment(
                         email=email,
                         card_token=str(uuid.uuid4()),
                         card_hash=hash_sensitive_data(card_number_clean),
-                        cvv_hash=hash_sensitive_data(cvv),
-                        expiry=expiry,
+                        cvv_hash="",
+                        expiry=expiry.strip(),
                         card_mask=card_mask_display,
                         psp_provider="mock"
                     )
