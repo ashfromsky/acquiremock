@@ -37,6 +37,7 @@ async def send_webhook_with_retry(
     payment: Payment,
     db: AsyncSession,
     timeout: int = config.WEBHOOK_TIMEOUT_SECONDS,
+    trigger: str = "auto",
 ) -> bool:
     webhook_url = payment.webhook_url
 
@@ -69,6 +70,7 @@ async def send_webhook_with_retry(
             payload=payload_body,
             signature=signature,
             attempt_number=attempt,
+            trigger=trigger,
             success=False,
             error_message=str(exc)[:500],
         )
@@ -116,6 +118,7 @@ async def send_webhook_with_retry(
             response_body=response.text[:1000],
             signature=signature,
             attempt_number=attempt,
+            trigger=trigger,
             success=success,
             error_message=error_msg,
         )
@@ -137,6 +140,7 @@ async def send_webhook_with_retry(
             payload=payload_body,
             signature=signature,
             attempt_number=attempt,
+            trigger=trigger,
             success=False,
             error_message=error_msg,
         )

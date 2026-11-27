@@ -74,6 +74,7 @@ class WebhookLog(SQLModel, table=True):
     response_body: Optional[str] = Field(default=None)
     signature: str
     attempt_number: int
+    trigger: str = Field(default="auto")
     success: bool = Field(default=False)
     error_message: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=utcnow)

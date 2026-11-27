@@ -6,16 +6,11 @@ from sqlalchemy import func, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.core.config import (
-    ALLOW_LOCAL_WEBHOOKS,
-    BASE_URL,
-    CURRENCY_CODE,
-    CURRENCY_SYMBOL,
-)
+import app.core.config as config
 from app.core.limiter import limiter
 from app.database.core.session import get_db
 from app.functional.main_functions import get_payment
-from app.models.errors import PaymentNotFoundError
+from app.models.errors import PaymentError, PaymentNotFoundError
 from app.models.main_models import AdminSession, Payment, PaymentStatus, WebhookLog
 from app.security.admin_auth import require_admin, require_admin_csrf
 from app.services.smtp_service import EMAIL_ENABLED
@@ -65,6 +60,7 @@ def _serialize_webhook_log(log: WebhookLog) -> dict:
         "response_body": log.response_body,
         "signature": log.signature,
         "attempt_number": log.attempt_number,
+        "trigger": log.trigger,
         "success": log.success,
         "error_message": log.error_message,
         "created_at": log.created_at.isoformat(),
@@ -75,13 +71,13 @@ def _serialize_webhook_log(log: WebhookLog) -> dict:
 async def get_console_config():
     return {
         "version": "2.0.0",
-        "base_url": BASE_URL,
-        "currency_code": CURRENCY_CODE,
-        "currency_symbol": CURRENCY_SYMBOL,
+        "base_url": config.BASE_URL,
+        "currency_code": config.CURRENCY_CODE,
+        "currency_symbol": config.CURRENCY_SYMBOL,
         "smtp_enabled": EMAIL_ENABLED,
-        "allow_local_webhooks": ALLOW_LOCAL_WEBHOOKS,
-        "payment_ttl_minutes": 15,
-        "max_webhook_attempts": 5,
+        "allow_local_webhooks": config.ALLOW_LOCAL_WEBHOOKS,
+        "payment_ttl_minutes": config.PAYMENT_TTL_MINUTES,
+        "max_webhook_attempts": config.WEBHOOK_MAX_ATTEMPTS,
     }
 
 
@@ -282,7 +278,31 @@ async def retry_console_webhook(
     if not payment:
         raise PaymentNotFoundError(payment_id)
 
-    success = await send_webhook_with_retry(payment, db)
+    if payment.status != PaymentStatus.PAID.value:
+        raise PaymentError(
+            code="WEBHOOK_RETRY_NOT_ALLOWED",
+            message="Webhooks can only be retried for paid payments",
+            status_code=409,
+            payment_id=payment_id,
+        )
+
+    if payment.webhook_status == "success":
+        raise PaymentError(
+            code="WEBHOOK_ALREADY_DELIVERED",
+            message="Webhook has already been delivered successfully",
+            status_code=409,
+            payment_id=payment_id,
+        )
+
+    if payment.webhook_attempts >= config.WEBHOOK_MAX_ATTEMPTS:
+        raise PaymentError(
+            code="WEBHOOK_MAX_ATTEMPTS_REACHED",
+            message=f"Maximum webhook delivery attempts ({config.WEBHOOK_MAX_ATTEMPTS}) reached",
+            status_code=409,
+            payment_id=payment_id,
+        )
+
+    success = await send_webhook_with_retry(payment, db, trigger="manual")
 
     latest_log = (
         await db.execute(

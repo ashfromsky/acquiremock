@@ -118,10 +118,66 @@ async def test_console_payments_filter_detail_and_webhook_retry(
     assert retry_data["success"] is True
     assert retry_data["webhook_attempts"] == 1
     assert retry_data["latest_log"]["response_status"] == 200
+    assert retry_data["latest_log"]["trigger"] == "manual"
 
     wh_list = await client.get("/api/console/webhooks", params={"success": "true"})
     assert wh_list.status_code == 200
     assert wh_list.json()["summary"]["succeeded"] == 1
+
+
+@pytest.mark.parametrize(
+    "status,webhook_status,webhook_attempts,expected_code",
+    [
+        (PaymentStatus.PENDING.value, None, 0, "WEBHOOK_RETRY_NOT_ALLOWED"),
+        (PaymentStatus.WAITING_FOR_OTP.value, None, 0, "WEBHOOK_RETRY_NOT_ALLOWED"),
+        (PaymentStatus.FAILED.value, None, 0, "WEBHOOK_RETRY_NOT_ALLOWED"),
+        (PaymentStatus.EXPIRED.value, None, 0, "WEBHOOK_RETRY_NOT_ALLOWED"),
+        (PaymentStatus.PAID.value, "success", 1, "WEBHOOK_ALREADY_DELIVERED"),
+        (PaymentStatus.PAID.value, "failed", 5, "WEBHOOK_MAX_ATTEMPTS_REACHED"),
+    ],
+)
+async def test_console_webhook_retry_enforces_invariants(
+    client: AsyncClient,
+    db_session,
+    admin_csrf: str,
+    monkeypatch,
+    status: str,
+    webhook_status,
+    webhook_attempts: int,
+    expected_code: str,
+):
+    payment = Payment(
+        id=f"pay-inv-{status}-{webhook_attempts}",
+        amount=5000,
+        reference="ORD-INV",
+        webhook_url="https://merchant.example.com/hook",
+        redirect_url="https://merchant.example.com/done",
+        status=status,
+        webhook_status=webhook_status,
+        webhook_attempts=webhook_attempts,
+    )
+    db_session.add(payment)
+    await db_session.commit()
+
+    called = False
+    orig_post = httpx.AsyncClient.post
+
+    async def fail_if_called(self, url, *args, **kwargs):
+        nonlocal called
+        if "merchant.example.com" in str(url):
+            called = True
+            raise AssertionError("Outbound HTTP request must not execute")
+        return await orig_post(self, url, *args, **kwargs)
+
+    monkeypatch.setattr(httpx.AsyncClient, "post", fail_if_called)
+
+    resp = await client.post(
+        f"/api/console/webhooks/{payment.id}/retry",
+        headers={"X-CSRF-Token": admin_csrf},
+    )
+    assert resp.status_code == 409
+    assert resp.json()["error"] == expected_code
+    assert called is False
 
 
 async def test_auth_session_and_delete_saved_card_idor(client: AsyncClient, db_session):
