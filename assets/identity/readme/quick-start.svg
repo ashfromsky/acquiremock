@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 220" width="1400" height="220" role="img" aria-label="QUICK START">
+  <defs>
+    <clipPath id="sec-quick-start-clip">
+      <rect x="0" y="0" width="1400" height="220" rx="18" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#sec-quick-start-clip)">
+    <rect width="1400" height="220" fill="#F5F1ED" />
+
+    <!-- Distinct Logo-Derived Architectural Motif (Right Zone) -->
+    
+      <path d="M 964 196 C 1010 92 1084 44 1196 44 L 1364 44" fill="none" stroke="#F2B8B3" stroke-width="18" stroke-linecap="round" opacity="0.65" />
+      <path d="M 1018 196 C 1058 118 1118 88 1212 88 L 1364 88" fill="none" stroke="#E99A98" stroke-width="18" stroke-linecap="round" />
+      <path d="M 1076 196 C 1106 148 1148 134 1222 134 L 1344 134" fill="none" stroke="#242222" stroke-width="16" stroke-linecap="round" />
+      <circle cx="1344" cy="134" r="7" fill="#F5F1ED" />
+      <circle cx="1018" cy="196" r="6" fill="#C55557" />
+    
+
+    <!-- Left Editorial Anchor -->
+    <rect x="56" y="54" width="32" height="3.5" rx="1.75" fill="#E99A98" />
+    <text x="100.0" y="60.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="12.0" font-weight="700" fill="#B04446" letter-spacing="1.44px">SECTION 04</text>
+    <text x="56.0" y="122.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="34.0" font-weight="700" fill="#242222" letter-spacing="2.04px">QUICK START</text>
+    <text x="56.0" y="166.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="16.0" font-weight="500" fill="#5C5757" letter-spacing="0.08px">Run a complete local payment simulation environment in minutes.</text>
+
+    <!-- Crisp 1px outer frame for GitHub Light & Dark compatibility -->
+    <rect x="0.5" y="0.5" width="1399" height="219" rx="18" fill="none" stroke="#E3DBD2" stroke-width="1" />
+  </g>
+</svg>

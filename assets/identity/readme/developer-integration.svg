@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 440" width="640" height="440" role="img" aria-label="Developer Integration">
+  <defs>
+    <clipPath id="cap-developer-integration-clip">
+      <rect x="0" y="0" width="640" height="440" rx="22" />
+    </clipPath>
+  </defs>
+  <g clip-path="url(#cap-developer-integration-clip)">
+    <rect width="640" height="440" fill="#F5F1ED" />
+
+    <!-- Subtle top index tag -->
+    <text x="44.0" y="48.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="11.0" font-weight="700" fill="#B04446" letter-spacing="1.32px">CAPABILITY  05</text>
+
+    <!-- Abstract Brand-Derived Geometric Stage (y=56..304) -->
+    
+      <!-- Subtle horizontal alignment axis -->
+      <line x1="96" y1="184" x2="544" y2="184" stroke="#DDD4CA" stroke-width="1.5" />
+
+      <!-- Left developer coupler (Charcoal) -->
+      <path d="M 118 184 L 222 184 C 244 184, 260 132, 304 132 C 344 132, 358 156, 358 184"
+            fill="none" stroke="#242222" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+
+      <!-- Right AcquireMock API coupler (Coral, interlocked symmetrically) -->
+      <path d="M 522 184 L 418 184 C 396 184, 380 236, 336 236 C 296 236, 282 212, 282 184"
+            fill="none" stroke="#E99A98" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+
+      <!-- Quiet concentric coupling ring -->
+      <circle cx="320" cy="184" r="74" fill="none" stroke="#F2B8B3" stroke-width="2" stroke-dasharray="6 8" />
+
+      <!-- Terminal anchors -->
+      <circle cx="118" cy="184" r="7" fill="#F5F1ED" stroke="#242222" stroke-width="4" />
+      <circle cx="522" cy="184" r="7" fill="#F5F1ED" stroke="#C55557" stroke-width="4" />
+    
+
+    <!-- Editorial Caption Bar -->
+    <line x1="44" y1="316" x2="596" y2="316" stroke="#DDD4CA" stroke-width="1" />
+    <text x="44.0" y="358.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="24.0" font-weight="600" fill="#242222" letter-spacing="-0.36px">Developer Integration</text>
+    <text x="44.0" y="392.0" font-family="Montserrat, 'Helvetica Neue', Arial, sans-serif" font-size="15.0" font-weight="500" fill="#5C5757">Predictable REST endpoints for drop-in local testing.</text>
+
+    <!-- Crisp 1px outer hairline -->
+    <rect x="0.5" y="0.5" width="639" height="439" rx="22" fill="none" stroke="#E3DBD2" stroke-width="1" />
+  </g>
+</svg>
