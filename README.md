@@ -1,44 +1,23 @@
-<div align="center">
-
-<br />
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="app/static/brand/logo-horizontal-dark.png" />
-  <img src="assets/identity/logo/logo_acquiremock-horizontal.png" alt="AcquireMock" width="320" />
+  <img src="assets/identity/logo/logo_acquiremock-horizontal.png" alt="AcquireMock" />
 </picture>
 
-<br /><br />
+**Self-hosted mock payment gateway for testing payment integrations end to end.**
 
-<p><strong>Self-hosted mock payment gateway for testing payment integrations end to end.</strong></p>
+Simulate invoice creation, hosted card checkout, email OTP verification, saved cards, and HMAC-SHA256 webhooks on your local machine or staging environment without external PSP credentials or real money.
 
-<p>Simulate invoice creation, hosted card checkout, email OTP verification, saved cards, and HMAC-SHA256 webhooks on your local machine or staging environment without external PSP credentials or real money.</p>
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-242222?style=flat-square)](https://www.python.org/downloads/)
+[![FastAPI 0.122](https://img.shields.io/badge/FastAPI-0.122-242222?style=flat-square)](https://fastapi.tiangolo.com)
+[![React 19 and Vite](https://img.shields.io/badge/React-19%20%2B%20Vite-242222?style=flat-square)](https://react.dev)
+![Release v2.0.0](https://img.shields.io/badge/Release-v2.0.0-D96F70?style=flat-square)
+[![Apache 2.0 License](https://img.shields.io/badge/License-Apache%202.0-242222?style=flat-square)](LICENSE)
 
-<p>
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/Python-3.11%2B-242222?style=flat-square" alt="Python 3.11+" /></a>
-  <a href="https://fastapi.tiangolo.com"><img src="https://img.shields.io/badge/FastAPI-0.122-242222?style=flat-square" alt="FastAPI 0.122" /></a>
-  <a href="https://react.dev"><img src="https://img.shields.io/badge/React-19%20%2B%20Vite-242222?style=flat-square" alt="React 19 and Vite" /></a>
-  <img src="https://img.shields.io/badge/Release-v2.0.0-D96F70?style=flat-square" alt="Release v2.0.0" />
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-242222?style=flat-square" alt="Apache 2.0 License" /></a>
-</p>
-
-<p>
-  <a href="#about">About</a> &middot;
-  <a href="#features">Features</a> &middot;
-  <a href="#architecture">Architecture</a> &middot;
-  <a href="#quick-start">Quick Start</a> &middot;
-  <a href="#documentation">Documentation</a> &middot;
-  <a href="#contributing">Contributing</a>
-</p>
-
-</div>
+[About](#what-ships-out-of-the-box) &middot; [Features](#capabilities) &middot; [Architecture](#repository-structure) &middot; [Quick Start](#prerequisites) &middot; [Documentation](#core-endpoints) &middot; [Contributing](#how-to-contribute)
 
 ---
 
-<a name="about"></a>
-
-<p align="center">
-  <img src="assets/identity/readme/about.svg" alt="Section 01: About AcquireMock" width="100%" />
-</p>
+![Section 01: About AcquireMock](assets/identity/readme/about.svg)
 
 AcquireMock lets your application test real HTTP payment flows locally without hitting production acquirers or sharing sandbox keys across developer machines. Your backend creates an invoice with one POST request, redirects buyers to a server-rendered checkout page, completes a 4-digit email OTP challenge, and receives HMAC-signed webhook callbacks.
 
@@ -57,25 +36,17 @@ AcquireMock lets your application test real HTTP payment flows locally without h
 
 ---
 
-<a name="features"></a>
+![Section 02: Features](assets/identity/readme/features.svg)
 
-<p align="center">
-  <img src="assets/identity/readme/features.svg" alt="Section 02: Features" width="100%" />
-</p>
+### Capabilities
 
-<p align="center">
-  <a href="#payment-simulation"><img src="assets/identity/readme/payment-simulation.svg" alt="Capability 01: Payment Simulation" width="420" /></a>
-  <a href="#transaction-lifecycle"><img src="assets/identity/readme/transaction-lifecycle.svg" alt="Capability 02: Transaction Lifecycle" width="420" /></a>
-</p>
-
-<p align="center">
-  <a href="#scenario-testing"><img src="assets/identity/readme/scenario-testing.svg" alt="Capability 03: Scenario Testing" width="420" /></a>
-</p>
-
-<p align="center">
-  <a href="#webhook-delivery"><img src="assets/identity/readme/webhook-delivery.svg" alt="Capability 04: Webhook Delivery" width="420" /></a>
-  <a href="#developer-integration"><img src="assets/identity/readme/developer-integration.svg" alt="Capability 05: Developer Integration" width="420" /></a>
-</p>
+| Capability | Summary |
+| :--- | :--- |
+| [![Capability 01: Payment Simulation](assets/identity/readme/payment-simulation.svg)](#payment-simulation) | **Payment Simulation.** Hosted checkout (`/checkout/{payment_id}`), `EN`/`UK`/`DE`/`RU` localization, Light/Dark themes, `bcrypt` saved cards, and `Strict` CSRF protection. |
+| [![Capability 02: Transaction Lifecycle](assets/identity/readme/transaction-lifecycle.svg)](#transaction-lifecycle) | **Transaction Lifecycle.** Explicit SQLModel states (`pending`, `waiting_for_otp`, `paid`, `failed`, `expired`), 15-minute auto-expiry, and live search at `/app/payments`. |
+| [![Capability 03: Scenario Testing](assets/identity/readme/scenario-testing.svg)](#scenario-testing) | **Scenario Testing.** Deterministic approval (`4444 4444 4444 4444`), `402 INSUFFICIENT_FUNDS`, `410 PAYMENT_EXPIRED`, `Idempotency-Key` replay, and `/app/testing` playground. |
+| [![Capability 04: Webhook Delivery](assets/identity/readme/webhook-delivery.svg)](#webhook-delivery) | **Webhook Delivery.** Compact sorted JSON signed with `HMAC-SHA256` (`X-Signature`), `webhook_logs` audit trail, 5-attempt exponential retry, and `/app/webhooks` verifier. |
+| [![Capability 05: Developer Integration](assets/identity/readme/developer-integration.svg)](#developer-integration) | **Developer Integration.** SQLite or PostgreSQL via async SQLModel, stdout OTP fallback when SMTP is unset, SSRF URL filtering (`ALLOW_LOCAL_WEBHOOKS`), and SlowAPI rate limits. |
 
 ### Payment Simulation
 
@@ -110,11 +81,7 @@ AcquireMock runs on SQLite (`sqlite+aiosqlite`) or PostgreSQL (`postgresql+async
 
 ---
 
-<a name="architecture"></a>
-
-<p align="center">
-  <img src="assets/identity/readme/architecture.svg" alt="Section 03: Architecture" width="100%" />
-</p>
+![Section 03: Architecture](assets/identity/readme/architecture.svg)
 
 ### Repository Structure
 
@@ -151,11 +118,7 @@ acquiremock/
 
 ---
 
-<a name="quick-start"></a>
-
-<p align="center">
-  <img src="assets/identity/readme/quick-start.svg" alt="Section 04: Quick Start" width="100%" />
-</p>
+![Section 04: Quick Start](assets/identity/readme/quick-start.svg)
 
 ### Prerequisites
 
@@ -238,11 +201,7 @@ TESTING=true DATABASE_URL=sqlite+aiosqlite:///:memory: WEBHOOK_SECRET=dev_test_s
 
 ---
 
-<a name="documentation"></a>
-
-<p align="center">
-  <img src="assets/identity/readme/documentation.svg" alt="Section 05: Documentation" width="100%" />
-</p>
+![Section 05: Documentation](assets/identity/readme/documentation.svg)
 
 ### Core Endpoints
 
@@ -336,11 +295,7 @@ export function verifyAcquireMockSignature(payload, signature, secret) {
 
 ---
 
-<a name="contributing"></a>
-
-<p align="center">
-  <img src="assets/identity/readme/contributing.svg" alt="Section 06: Community & Contributing" width="100%" />
-</p>
+![Section 06: Community & Contributing](assets/identity/readme/contributing.svg)
 
 ### How to Contribute
 
@@ -365,6 +320,4 @@ AcquireMock is licensed under the **Apache License 2.0**. See [LICENSE](LICENSE)
 
 ---
 
-<div align="center">
-  <sub>AcquireMock v2.0.0 &middot; Built with FastAPI, SQLModel, Jinja2, and React</sub>
-</div>
+*AcquireMock v2.0.0: Built with FastAPI, SQLModel, Jinja2, and React.*
