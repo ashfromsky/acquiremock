@@ -1,4 +1,4 @@
-﻿name: AcquireMock CI
+name: AcquireMock CI
 
 on:
   push:
@@ -34,14 +34,14 @@ jobs:
 
       - name: Verify Alembic migration upgrade
         env:
-          DATABASE_URL: sqlite+aiosqlite:///./ci_migration_test.db
+          DATABASE_URL: "sqlite+aiosqlite:///./ci_migration_test.db"
         run: |
           alembic upgrade head
           rm -f ci_migration_test.db
 
       - name: Run pytest suite
         env:
-          DATABASE_URL: sqlite+aiosqlite:///:memory:
+          DATABASE_URL: "sqlite+aiosqlite:///:memory:"
         run: pytest -v
 
   backend-postgres:
@@ -79,13 +79,13 @@ jobs:
 
       - name: Run Alembic migrations on PostgreSQL
         env:
-          DATABASE_URL: postgresql+asyncpg://acquiremock:acquiremock_ci_password@localhost:5432/acquiremock_test
+          DATABASE_URL: "postgresql+asyncpg://acquiremock:acquiremock_ci_password@localhost:5432/acquiremock_test"
         run: alembic upgrade head
 
       - name: Run PostgreSQL integration tests
         env:
-          DATABASE_URL: sqlite+aiosqlite:///:memory:
-          POSTGRES_TEST_URL: postgresql+asyncpg://acquiremock:acquiremock_ci_password@localhost:5432/acquiremock_test
+          DATABASE_URL: "sqlite+aiosqlite:///:memory:"
+          POSTGRES_TEST_URL: "postgresql+asyncpg://acquiremock:acquiremock_ci_password@localhost:5432/acquiremock_test"
         run: pytest -v tests/test_postgres_integration.py
 
   frontend:
