@@ -38,6 +38,8 @@ class Payment(SQLModel, table=True):
     webhook_attempts: int = Field(default=0)
     webhook_last_attempt: Optional[datetime] = Field(default=None)
     webhook_status: Optional[str] = Field(default=None)
+    webhook_next_attempt_at: Optional[datetime] = Field(default=None, index=True)
+    webhook_locked_until: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=utcnow)
     updated_at: datetime = Field(default_factory=utcnow)
     expires_at: datetime = Field(

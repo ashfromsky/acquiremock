@@ -8,9 +8,9 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy import text
 
 from app.database.core.session import engine
-from app.functional.main_functions import init_db
 from app.services.background_tasks import start_background_tasks
 from app.models.errors import PaymentError
 from app.core.limiter import limiter
@@ -41,9 +41,10 @@ TESTING = os.getenv("TESTING", "false").lower() == "true"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting up application and initializing database...")
-    await init_db(engine)
-    logger.info("Database initialized successfully.")
+    logger.info("Verifying database connectivity...")
+    async with engine.connect() as conn:
+        await conn.execute(text("SELECT 1"))
+    logger.info("Database connection verified.")
 
     if not TESTING:
         asyncio.create_task(start_background_tasks())
