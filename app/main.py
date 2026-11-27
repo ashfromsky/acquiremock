@@ -25,7 +25,8 @@ from app.api.routes import (
     health,
     default_routers,
     merchant,
-    checkout
+    checkout,
+    console
 )
 
 logging.basicConfig(
@@ -65,6 +66,9 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+SPA_ASSETS_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend", "dist", "assets"))
+if os.path.isdir(SPA_ASSETS_DIR):
+    app.mount("/assets", StaticFiles(directory=SPA_ASSETS_DIR), name="spa-assets")
 
 
 @app.exception_handler(PaymentError)
@@ -95,6 +99,7 @@ app.include_router(webhooks.router)
 app.include_router(user.router)
 app.include_router(merchant.router)
 app.include_router(checkout.router)
+app.include_router(console.router)
 
 if __name__ == "__main__":
     import uvicorn

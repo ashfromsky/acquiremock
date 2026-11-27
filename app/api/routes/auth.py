@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from app.core.config import COOKIE_SECURE
 from app.core.limiter import limiter
-from app.security.crypto import create_signed_email_token, generate_secure_otp
+from app.security.crypto import create_signed_email_token, generate_secure_otp, verify_signed_email_token
 from app.services.smtp_service import send_otp_email
 
 logger = logging.getLogger(__name__)
@@ -80,6 +80,12 @@ async def auth_verify_code(request: Request, response: Response, req: VerifyCode
     )
     logger.info(f"User {req.email} verified successfully")
     return {"status": "ok", "message": "Verified"}
+
+
+@router.get("/session")
+async def auth_session(request: Request):
+    email = verify_signed_email_token(request.cookies.get("user_session"))
+    return {"authenticated": bool(email), "email": email}
 
 
 @router.post("/logout")

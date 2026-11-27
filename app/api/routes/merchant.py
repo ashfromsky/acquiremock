@@ -1,10 +1,8 @@
 ﻿from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
-from fastapi.templating import Jinja2Templates
 
+from app.api.routes.default_routers import render_spa_or_fallback
 from app.core.config import CURRENCY_SYMBOL
-
-templates = Jinja2Templates(directory="templates/pages")
 
 router = APIRouter(
     prefix="/merchant",
@@ -14,12 +12,13 @@ router = APIRouter(
 
 @router.get("/login", response_class=HTMLResponse)
 async def merchant_login(request: Request):
-    return templates.TemplateResponse(request, "login.html", {"request": request})
+    return render_spa_or_fallback(request, "login.html")
 
 
 @router.get("/dashboard", response_class=HTMLResponse)
 async def merchant_dashboard(request: Request):
-    return templates.TemplateResponse(request, "dashboard.html", {
-        "request": request,
-        "currency_symbol": CURRENCY_SYMBOL
-    })
+    return render_spa_or_fallback(
+        request,
+        "dashboard.html",
+        {"currency_symbol": CURRENCY_SYMBOL},
+    )
