@@ -9,8 +9,8 @@ from app.functional.main_functions import get_user_data
 from app.database.core.session import get_db
 from app.functional.main_functions import get_payment, update_payment
 from app.models.errors import PaymentNotFoundError, PaymentAlreadyProcessedError, PaymentExpiredError
-from app.security.crypto import generate_csrf_token
-from app.core.config import CURRENCY_SYMBOL
+from app.security.crypto import generate_csrf_token, verify_signed_email_token
+from app.core.config import COOKIE_SECURE, CURRENCY_SYMBOL
 
 logger = logging.getLogger(__name__)
 templates = Jinja2Templates(directory="templates/pages")
@@ -35,7 +35,7 @@ async def checkout(payment_id: str, request: Request, db: AsyncSession = Depends
         await update_payment(db, payment)
         raise PaymentExpiredError(payment_id)
 
-    user_email = request.cookies.get("user_email")
+    user_email = verify_signed_email_token(request.cookies.get("user_session"))
     recent_operations, saved_cards = [], []
     csrf_token = generate_csrf_token()
 
@@ -58,7 +58,7 @@ async def checkout(payment_id: str, request: Request, db: AsyncSession = Depends
         key="csrf_token",
         value=csrf_token,
         httponly=True,
-        secure=True,
+        secure=COOKIE_SECURE,
         samesite="Strict"
     )
     return response

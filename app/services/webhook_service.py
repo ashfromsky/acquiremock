@@ -11,6 +11,7 @@ import app.database.core.session as db_session_module
 from app.core.config import WEBHOOK_SECRET
 from app.functional.main_functions import get_payment, log_webhook, update_payment
 from app.models.main_models import Payment, WebhookLog
+from app.security.sanitizer import validate_webhook_url
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,16 @@ async def send_webhook_with_retry(
 
     if not webhook_url:
         logger.warning(f"No webhook URL for payment {payment.id}")
+        return False
+
+    try:
+        webhook_url = validate_webhook_url(webhook_url)
+    except ValueError as e:
+        logger.error(f"Blocked invalid webhook URL for payment {payment.id}: {e}")
+        payment.webhook_attempts = payment.webhook_attempts + 1
+        payment.webhook_last_attempt = datetime.utcnow()
+        payment.webhook_status = "failed"
+        await update_payment(db, payment)
         return False
 
     webhook_data = {

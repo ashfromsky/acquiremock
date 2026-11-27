@@ -1,4 +1,5 @@
-﻿import uuid
+﻿import hmac
+import uuid
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
@@ -28,13 +29,15 @@ from app.functional.main_functions import (
 )
 from app.security.sanitizer import clean_input
 from app.security.crypto import (
+    create_signed_email_token,
     generate_csrf_token,
     generate_secure_otp,
     hash_sensitive_data,
-    verify_sensitive_data
+    verify_sensitive_data,
+    verify_signed_email_token
 )
 from app.services.smtp_service import send_otp_email
-from app.core.config import BASE_URL, CURRENCY_SYMBOL
+from app.core.config import BASE_URL, COOKIE_SECURE, CURRENCY_SYMBOL
 from app.core.limiter import limiter
 
 logger = logging.getLogger(__name__)
@@ -127,7 +130,7 @@ async def process_payment(
         db: AsyncSession = Depends(get_db)
 ):
     cookie_token = request.cookies.get("csrf_token")
-    if not cookie_token or cookie_token != csrf_token:
+    if not cookie_token or not hmac.compare_digest(cookie_token, csrf_token):
         logger.warning(f"CSRF Attack attempt on payment {payment_id}")
         raise CSRFTokenMismatchError(payment_id)
 
@@ -156,9 +159,19 @@ async def process_payment(
     card_mask_display = ""
     save_card_bool = save_card == "true" if save_card else False
 
+    verified_email = verify_signed_email_token(request.cookies.get("user_session"))
+
     if saved_card_id and saved_card_id.strip():
         card_id_int = int(saved_card_id)
-        card_query = await db.execute(select(SavedCard).where(SavedCard.id == card_id_int))
+        if not verified_email:
+            raise SavedCardNotFoundError(card_id_int)
+
+        card_query = await db.execute(
+            select(SavedCard).where(
+                SavedCard.id == card_id_int,
+                SavedCard.email == verified_email
+            )
+        )
         saved_card_obj = card_query.scalars().first()
 
         if not saved_card_obj:
@@ -167,7 +180,7 @@ async def process_payment(
         if verify_sensitive_data("4444444444444444", saved_card_obj.card_hash):
             is_valid_card = True
             card_mask_display = saved_card_obj.card_mask
-            payment.otp_email = email
+            payment.otp_email = verified_email
             payment.card_mask = saved_card_obj.card_mask
 
     elif card_number:
@@ -198,18 +211,17 @@ async def process_payment(
                     logger.info(f"Card saved for user {email}")
 
     if is_valid_card:
-        cookie_email = request.cookies.get("user_email")
-        if cookie_email and cookie_email == email:
-            logger.info(f"Cookie matched for {email}, skipping OTP")
+        if verified_email and hmac.compare_digest(verified_email, email):
+            logger.info(f"Signed session matched for {email}, skipping OTP")
             await finalize_successful_payment(payment, db, background_tasks)
             response = RedirectResponse(url=f"/success/{payment_id}", status_code=303)
             response.set_cookie(
-                key="user_email",
-                value=email,
+                key="user_session",
+                value=create_signed_email_token(email),
                 max_age=2592000,
                 httponly=True,
-                secure=True,
-                samesite="Strict"
+                secure=COOKIE_SECURE,
+                samesite="lax"
             )
             return response
 

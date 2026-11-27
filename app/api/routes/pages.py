@@ -1,4 +1,5 @@
-﻿import logging
+﻿import hmac
+import logging
 from fastapi import APIRouter, Request, Form, Depends, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -7,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.core.session import get_db
 from app.functional.main_functions import get_payment, update_payment
 from app.models.errors import PaymentNotFoundError, InvalidOTPError
-from app.core.config import CURRENCY_SYMBOL
+from app.core.config import COOKIE_SECURE, CURRENCY_SYMBOL
+from app.security.crypto import create_signed_email_token
 
 logger = logging.getLogger(__name__)
 templates = Jinja2Templates(directory="templates/pages")
@@ -47,7 +49,7 @@ async def verify_otp(
     if not payment:
         raise PaymentNotFoundError(payment_id)
 
-    if not payment.otp_code or payment.otp_code != otp_code:
+    if not payment.otp_code or not hmac.compare_digest(payment.otp_code, otp_code):
         logger.warning(f"Invalid OTP for {payment_id}")
         raise InvalidOTPError(payment_id)
 
@@ -55,14 +57,15 @@ async def verify_otp(
     await finalize_successful_payment(payment, db, background_tasks)
 
     response = RedirectResponse(url=f"/success/{payment_id}", status_code=303)
-    response.set_cookie(
-        key="user_email",
-        value=payment.otp_email,
-        max_age=2592000,
-        httponly=True,
-        secure=True,
-        samesite="Strict"
-    )
+    if payment.otp_email:
+        response.set_cookie(
+            key="user_session",
+            value=create_signed_email_token(payment.otp_email),
+            max_age=2592000,
+            httponly=True,
+            secure=COOKIE_SECURE,
+            samesite="lax"
+        )
     return response
 
 
